@@ -81,6 +81,9 @@ export interface SessionCheckpointProgress {
   checkpointId: string;
   status: SessionCheckpointStatus;
   phase: SessionCheckpointPhase;
+  usedHintCount: number;
+  solutionShown: boolean;
+  wrongAttemptCount: number;
 }
 
 export interface GameSessionProgress {
@@ -90,6 +93,8 @@ export interface GameSessionProgress {
   startedAt: string;
   updatedAt: string;
   activeCheckpointId: string;
+  isCompleted: boolean;
+  completedAt: string | null;
   checkpoints: SessionCheckpointProgress[];
 }
 

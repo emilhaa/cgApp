@@ -181,6 +181,44 @@ code {
   text-decoration: none;
 }
 
+.secondary-action-link,
+.secondary-action-button,
+.action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 18px;
+  border: 1px solid rgba(124, 74, 29, 0.22);
+  border-radius: 999px;
+  background: rgba(240, 228, 200, 0.48);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.secondary-action-button {
+  appearance: none;
+  cursor: pointer;
+}
+
+.action-button {
+  cursor: pointer;
+}
+
+.action-button:disabled,
+.mini-action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+}
+
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -223,7 +261,13 @@ code {
   text-align: left;
 }
 
-button.checkpoint-card {
+.checkpoint-card--interactive {
+  display: block;
+  text-decoration: none;
+}
+
+button.checkpoint-card,
+.checkpoint-card--interactive {
   cursor: pointer;
 }
 
@@ -307,6 +351,188 @@ button.checkpoint-card {
 .overview-detail {
   display: grid;
   gap: 12px;
+}
+
+.detail-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.detail-form {
+  display: grid;
+  gap: 12px;
+}
+
+.support-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.support-card {
+  padding: 14px;
+  border: 1px solid rgba(124, 74, 29, 0.18);
+  border-radius: 16px;
+  background: rgba(240, 228, 200, 0.36);
+}
+
+.support-card--warning {
+  background: rgba(255, 242, 217, 0.88);
+}
+
+.support-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.task-fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.field-label {
+  font-weight: 700;
+}
+
+.text-input {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid rgba(124, 74, 29, 0.22);
+  border-radius: 14px;
+  background: #fffdf7;
+  color: var(--text);
+  font: inherit;
+}
+
+.file-input {
+  width: 100%;
+  font: inherit;
+}
+
+.task-media-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.task-media-card,
+.photo-preview-card {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid rgba(124, 74, 29, 0.18);
+  border-radius: 16px;
+  background: rgba(255, 250, 240, 0.92);
+}
+
+.task-media-image,
+.photo-preview-image {
+  display: block;
+  width: 100%;
+  border-radius: 12px;
+}
+
+.task-media-caption {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.option-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.option-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(124, 74, 29, 0.18);
+  border-radius: 16px;
+  background: rgba(255, 250, 240, 0.92);
+  line-height: 1.45;
+}
+
+.sequence-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sequence-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(124, 74, 29, 0.18);
+  border-radius: 16px;
+  background: rgba(255, 250, 240, 0.92);
+}
+
+.sequence-copy {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  line-height: 1.4;
+}
+
+.sequence-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: rgba(124, 74, 29, 0.12);
+  color: var(--accent-strong);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.sequence-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mini-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 1px solid rgba(124, 74, 29, 0.22);
+  border-radius: 999px;
+  background: rgba(240, 228, 200, 0.48);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.feedback-box {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  line-height: 1.45;
+}
+
+.feedback-box--error {
+  border: 1px solid rgba(173, 66, 49, 0.3);
+  background: rgba(255, 241, 239, 0.92);
+  color: #8a2b1c;
+}
+
+.feedback-box--success {
+  border: 1px solid rgba(63, 124, 71, 0.28);
+  background: rgba(236, 247, 232, 0.94);
+  color: #25542e;
 }
 
 @media (min-width: 640px) {

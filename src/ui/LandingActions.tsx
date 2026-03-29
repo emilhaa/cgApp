@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   continueStoredProgress,
@@ -62,6 +63,10 @@ function shortSessionId(sessionId: string) {
 }
 
 function getActiveCheckpointTitle(game: GameContent, progress: GameSessionProgress | null) {
+  if (progress?.isCompleted) {
+    return "Hra dokončená";
+  }
+
   const activeCheckpointId = progress?.activeCheckpointId ?? game.checkpoints[0]?.id;
   const activeCheckpoint = game.checkpoints.find((checkpoint) => checkpoint.id === activeCheckpointId);
   return activeCheckpoint?.title ?? game.checkpoints[0]?.title ?? "Prvý checkpoint";
@@ -145,23 +150,37 @@ export function LandingActions({ game }: LandingActionsProps) {
   }
 
   const hasStoredProgress = progress !== null;
+  const isCompleted = progress?.isCompleted ?? false;
   const activeCheckpointTitle = getActiveCheckpointTitle(game, progress);
   const completedCount = getCompletedCount(progress);
 
   return (
     <section className="panel-card">
-      <p className="eyebrow">{hasStoredProgress ? "Pokračovanie" : "Začiatok hry"}</p>
+      <p className="eyebrow">
+        {isCompleted ? "Dokončené" : hasStoredProgress ? "Pokračovanie" : "Začiatok hry"}
+      </p>
       <h2 className="section-title">
-        {hasStoredProgress ? "Môžeš pokračovať" : "Môžeš začať"}
+        {isCompleted ? "Hra je už dohraná" : hasStoredProgress ? "Môžeš pokračovať" : "Môžeš začať"}
       </h2>
       <p className="section-copy">
-        {hasStoredProgress
+        {isCompleted
+          ? "Na tomto zariadení je uložená dokončená hra. Môžeš si pozrieť výsledok alebo začať novú session."
+          : hasStoredProgress
           ? "Na tomto zariadení je uložená rozhraná hra. Pokračuj od posledného aktívneho stanovišťa alebo začni odznova."
           : "Po štarte sa hra uloží priamo do tohto prehliadača, takže sa k nej môžeš neskôr vrátiť."}
       </p>
 
       <div style={buttonRowStyle}>
-        {hasStoredProgress ? (
+        {isCompleted ? (
+          <>
+            <Link href="/finish" style={primaryButtonStyle}>
+              Pozrieť výsledok hry
+            </Link>
+            <button style={secondaryButtonStyle} type="button" onClick={handleRestart}>
+              Začať odznova
+            </button>
+          </>
+        ) : hasStoredProgress ? (
           <>
             <button style={primaryButtonStyle} type="button" onClick={handleContinue}>
               Pokračovať v hre
@@ -191,7 +210,7 @@ export function LandingActions({ game }: LandingActionsProps) {
               <span className="meta-value">{shortSessionId(progress.session_id)}</span>
             </div>
             <div className="meta-item">
-              <span className="meta-label">Kam budeš pokračovať</span>
+              <span className="meta-label">{isCompleted ? "Stav hry" : "Kam budeš pokračovať"}</span>
               <span className="meta-value">{activeCheckpointTitle}</span>
             </div>
             <div className="meta-item">

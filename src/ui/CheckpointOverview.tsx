@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import { deriveCheckpointOverviewItems, deriveCheckpointOverviewSummary, getInitialSelectableCheckpointId } from "@/src/core/gameLogic";
+import { deriveCheckpointOverviewItems, deriveCheckpointOverviewSummary } from "@/src/core/gameLogic";
 import { loadStoredProgress } from "@/src/core/progress";
-import type { CheckpointOverviewItem, CheckpointOverviewState } from "@/src/core/gameLogic";
+import type { CheckpointOverviewState } from "@/src/core/gameLogic";
 import type { GameContent, GameSessionProgress } from "@/src/types/game";
 
 type CheckpointOverviewProps = {
@@ -27,7 +28,6 @@ function getStateLabel(state: CheckpointOverviewState) {
 export function CheckpointOverview({ game }: CheckpointOverviewProps) {
   const [progress, setProgress] = useState<GameSessionProgress | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
-  const [selectedCheckpointId, setSelectedCheckpointId] = useState<string | null>(null);
 
   useEffect(() => {
     const storedProgress = loadStoredProgress(game);
@@ -47,8 +47,6 @@ export function CheckpointOverview({ game }: CheckpointOverviewProps) {
 
   const items = deriveCheckpointOverviewItems(game, progress);
   const summary = deriveCheckpointOverviewSummary(items);
-  const effectiveSelectedCheckpointId = selectedCheckpointId ?? getInitialSelectableCheckpointId(items);
-  const selectedItem = items.find((item) => item.checkpoint.id === effectiveSelectedCheckpointId) ?? null;
 
   return (
     <>
@@ -78,7 +76,6 @@ export function CheckpointOverview({ game }: CheckpointOverviewProps) {
         <div className="checkpoint-list">
           {items.map((item) => {
             const cardClassName = `checkpoint-card checkpoint-card--${item.state}`;
-            const isSelected = item.checkpoint.id === effectiveSelectedCheckpointId;
 
             if (!item.isClickable) {
               return (
@@ -98,11 +95,10 @@ export function CheckpointOverview({ game }: CheckpointOverviewProps) {
             }
 
             return (
-              <button
-                className={`${cardClassName}${isSelected ? " checkpoint-card--selected" : ""}`}
+              <Link
+                className={`${cardClassName} checkpoint-card--interactive`}
+                href={`/checkpoints/${item.checkpoint.id}`}
                 key={item.checkpoint.id}
-                onClick={() => setSelectedCheckpointId(item.checkpoint.id)}
-                type="button"
               >
                 <div className="checkpoint-row">
                   <div>
@@ -114,29 +110,11 @@ export function CheckpointOverview({ game }: CheckpointOverviewProps) {
                   </span>
                 </div>
                 <p className="checkpoint-copy">{item.checkpoint.locationText}</p>
-              </button>
+              </Link>
             );
           })}
         </div>
       </section>
-
-      {selectedItem ? (
-        <section className="panel-card">
-          <p className="eyebrow">Vybraný checkpoint</p>
-          <h2 className="section-title">{selectedItem.checkpoint.title}</h2>
-          <div className="overview-detail">
-            <p className="section-copy">
-              <strong>Stav:</strong> {getStateLabel(selectedItem.state)}
-            </p>
-            <p className="section-copy">
-              <strong>Kam ideš:</strong> {selectedItem.checkpoint.locationText}
-            </p>
-            <p className="section-copy">
-              <strong>Krátke intro:</strong> {selectedItem.checkpoint.storyBeat}
-            </p>
-          </div>
-        </section>
-      ) : null}
     </>
   );
 }

@@ -49,7 +49,8 @@ export default function HomePage() {
           <h2 className="section-title">Ako hra funguje</h2>
           <p className="section-copy">
             Hra je pripravená pre mobil a priebežne si pamätá tvoj postup v tomto prehliadači. Keď sa
-            vrátiš neskôr, môžeš pokračovať bez nového štartu.
+            vrátiš neskôr, môžeš pokračovať bez nového štartu. Po dokončení sa ti zobrazí aj stručný
+            výsledok celej session.
           </p>
         </section>
 
