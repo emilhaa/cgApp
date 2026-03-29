@@ -1,0 +1,310 @@
+{
+  "id": "stiavnica-mvp",
+  "title": "City Game Stiavnica",
+  "duration": "90-120 min",
+  "language": "sk",
+  "checkpoints": [
+    {
+      "id": "cp-01-trojicny",
+      "order": 1,
+      "title": "Trojicne namestie",
+      "storyBeat": "Vitajte v hre. Najdi orientacny bod na namesti.",
+      "microGuide": "Postav sa ku morovemu stlpu.",
+      "locationText": "Trojicne namestie, pri morovom stlpe.",
+      "location": {
+        "lat": 48.459574,
+        "lng": 18.892526,
+        "label": "Trojicne namestie"
+      },
+      "task": {
+        "type": "code",
+        "question": "Ake slovo je na tabulke pri stlpe? (zadaj jedno slovo)",
+        "answer": "pamatnik",
+        "hints": [
+          "Pozri tabulku na podstavci."
+        ],
+        "failsafe": "Ak slovo nevies najst, zadaj pamatnik a pokracuj.",
+        "media": [
+          {
+            "type": "image",
+            "src": "/media/Banská_Štiavnica_-_Morový_stĺp.jpg",
+            "alt": "Morovy stlp na Trojicnom namesti"
+          }
+        ]
+      }
+    },
+    {
+      "id": "cp-02-radnica",
+      "order": 2,
+      "title": "Stara radnica",
+      "storyBeat": "Druhy krok vedie k historickej budove.",
+      "microGuide": "Najdi vstup do Starej radnice.",
+      "locationText": "Stara radnica v centre mesta.",
+      "location": {
+        "lat": 48.458907,
+        "lng": 18.8921416,
+        "label": "Stara radnica"
+      },
+      "task": {
+        "type": "sequence",
+        "question": "Zoradte obrazky na reliefe oproti radnici zlava doprava.",
+        "sequenceItems": [
+          "Maria Terezia",
+          "Samuel Mikoviny",
+          "Dvaja pilcici",
+          "Jasterica so zlatom v papuli"
+        ],
+        "answer": [
+          "Dvaja pilcici",
+          "Samuel Mikoviny",
+          "Maria Terezia",
+          "Jasterica so zlatom v papuli"
+        ],
+        "hints": [
+          "Jasterica je uplne na konci",
+          "Pilcici su na opacnom konci."
+        ],
+        "failsafe": "Dvaja pilcici, Samuel Mikoviny, Maria Terezia, Jasterica so zlatom v papuli",
+        "media": [
+        ]
+      }
+    },
+    {
+      "id": "cp-03-klopacka",
+      "order": 3,
+      "title": "Klopacka",
+      "storyBeat": "Treti krok vedie k historickej budove.",
+      "microGuide": "Zaujimavost o klopacke.",
+      "locationText": "Na hlavnej ceste na mure na urovni klopacky je pamatna tabula.",
+      "location": {
+        "lat": 48.457865,
+        "lng": 18.892345,
+        "label": "Klopacka"
+      },
+      "task": {
+        "type": "code",
+        "question": " Ktore krstne meno bolo najcastesie medzi ucastnikmi banickeho povstania z roku 1852 vaznenymi v Klopacke?",
+        "answer": "Jan",
+        "hints": [
+          "Zacina na pismeno J.",
+          "Jozef to nie je."
+        ],
+        "failsafe": "Ak je tabula prekryta, vyber Jan a pokracuj.",
+        "media": [
+          {
+            "type": "image",
+            "src": "/media/cp-03-reference.jpg",
+            "alt": "Budova Klopacky s pamatnou tabulou"
+          }
+        ]
+      }
+    },
+    {
+      "id": "cp-04-piargska",
+      "order": 4,
+      "title": "Piargska brana",
+      "storyBeat": "Druhy krok vedie k historickej budove.",
+      "microGuide": "Najdi vstup do Starej radnice.",
+      "locationText": "Pokracujte dalej po hlavnej ceste, ktora dalej stupa tiahlou zakrutou dohora. Ked na plavej strane sponci oborny mur, v dialke zbadate Piargsku branu.",
+      "location": {
+        "lat": 48.455441,
+        "lng": 18.893220,
+        "label": "Piargska brana"
+      },
+      "task": {
+        "type": "multiple_choice",
+        "question": "Ktory z tychto akrtefaktov mozes najst na brane?.",
+        "options": ["Anjel", "Tu maju mat obrazky"],
+        "answer": "Anjel",
+        "hints": [
+          "Pozri sa nad vchod do mesta."
+        ],
+        "failsafe": "Ak je brana prekryta, vyber Anjel a pokracuj.",
+        "media": [
+        ]
+      }
+    },
+    {
+      "id": "cp-05-novy",
+      "order": 5,
+      "title": "Novy Zamok",
+      "storyBeat": "Treti krok vedie k historickej budove.",
+      "microGuide": "Zaujimavost o Novom Zamku.",
+      "locationText": "Vrat sa kusok naspat, zaboc poza kostol bez veze dvakrat doprava a po kamennej ceste pokracuj k Novemu Zamku.",
+      "location": {
+        "lat": 48.455896,
+        "lng": 18.896105,
+        "label": "Novy Zamok"
+      },
+      "task": {
+        "type": "code",
+        "question": "Co na fotke chyba obroti skutocnosti? (zadaj jedno slovo)",
+        "answer": "Veza",
+        "hints": [
+          "Pozri sa na kalvariu - budovu na konci naproti",
+          "Kolko vezi ma v skutocnosti?"
+        ],
+        "failsafe": "Ak je vyhlad zarasteny, zadaj Veza a pokracuj.",
+        "media": [
+          {
+            "type": "image",
+            "src": "/media/cp-05-reference.jpg",
+            "alt": "Vyhlad z Nového Zamku na Kalvariu, kde je vidiet ze veza chybala"
+          }
+        ]
+      }
+    },
+    {
+      "id": "cp-06-synagoga",
+      "order": 6,
+      "title": "Synagoga",
+      "storyBeat": "Styri krok vedie k historickej budove.",
+      "microGuide": "Zaujimavost o synagoge.",
+      "locationText": "Vrat sa po kamennej ceste naspat, za parkoviskom zaboc dobrava nadol strmou Novozamockou ulicou. Ta sa postupne zacne stacat dolava az na pravej strane uvidis zltu budovu synagogy.",
+      "location": {
+        "lat": 48.458262,
+        "lng": 18.893490,
+        "label": "Synagoga"
+      },
+      "task": {
+        "type": "code",
+        "question": "Zadaj stvorciferne cislo שתכו",
+        "answer": "4223",
+        "hints": [
+          "Nepomyl si ב a כ"
+        ],
+        "failsafe": "Ak je napis necitatelny, zadaj 4223 a pokracuj.",
+        "media": [
+        ]
+      }
+    },
+    {
+      "id": "cp-07-nacko",
+      "order": 7,
+      "title": "Nacko",
+      "storyBeat": "Piaty krok vedie k historickej budove.",
+      "microGuide": "Najdi vstup do Starej radnice.",
+      "locationText": "Za synagogou odbocte dobrava na Striebornu ulicu a na nej na prvej odbocke zabocte dolava. Pridete na hlavnu cestu na jej opacnej strane zbadate Stiavnicky trotuar a na nom mensiu postavu.",
+      "location": {
+        "lat": 48.458486,
+        "lng": 18.894887,
+        "label": "Nacko"
+      },
+      "task": {
+        "type": "multiple_choice",
+        "question": "Aku vysku ma Stiavnicky nacko?.",
+        "options": ["150cm", "160cm", "170cm", "180cm"],
+        "answer": "160cm",
+        "hints": [
+          "Kto z vas je mu vyskou najblizsie?"
+        ],
+        "failsafe": "Ak je nacko skryty, vyber 160cm a pokracuj.",
+        "media": [
+        ]
+      }
+    },
+    {
+      "id": "cp-08-kammerhof",
+      "order": 8,
+      "title": "Kammerhof",
+      "storyBeat": "Piaty krok vedie k historickej budove.",
+      "microGuide": "Najdi vstup do Starej radnice.",
+      "locationText": "Pokracujte hlavnou cestou nadol a pri najblizsej krizovatke uz zbadate sochu Andreja Kmeta.",
+      "location": {
+        "lat": 48.458258,
+        "lng": 18.895545,
+        "label": "Kammerhof"
+      },
+      "task": {
+        "type": "photo_pose",
+        "question": "Nabodobnite co najlepsie pozu Andreja Kmeta a odfotte sa tak s nim.",
+        "hint1": "Vsimnite si aj ako stoji.",
+        "hint2": "Skuste napodobnit aj sklon tela a polohu ruk.",
+        "failsafe": "Ak je pri soche prilis vela ludi alebo sa neviete odfotit, ukazte si sochu a pokracujte dalej.",
+        "verify": {
+          "requirements": [
+            "Na jednej fotke musi byt viditelna socha Andreja Kmeta aj hrac.",
+            "Hrac stoji vedla sochy a snazi sa napodobnit jej celkovy postoj.",
+            "Hrac sa snazi napodobnit sklon tela a polohu ruk podobne ako socha."
+          ],
+          "pass_confidence": 0.75,
+          "max_attempts": 5
+        },
+        "media": [
+        ]
+      }
+    },
+    {
+      "id": "cp-09-dolna",
+      "order": 9,
+      "title": "Dolna ruzova ulica",
+      "storyBeat": "Piaty krok vedie k historickej budove.",
+      "microGuide": "Najdi vstup do Starej radnice.",
+      "locationText": "Vydajte sa dolava nahor. Po 50 metroch pred restauraciou Matej zabocte dolava na schody a pokracujte po nich uplne nahor.",
+      "location": {
+        "lat": 48.45893,
+        "lng": 18.89535,
+        "label": "Dolna ruzova ulica"
+      },
+      "task": {
+        "type": "code",
+        "question": "Spravte si fotku s Novym zakom tak, ze ho budete drzat medzi prstami ruky.",
+        "answer": "160cm",
+        "hints": [
+          "Fotograf musi navigovat foteneho, ako pohnut rukami."
+        ],
+        "failsafe": "Ak je nacko skryty, vyber 160cm a pokracuj.",
+        "media": [
+        ]
+      }
+    },
+    {
+      "id": "cp-10-katarina",
+      "order": 10,
+      "title": "Kostol sv. Katariny",
+      "storyBeat": "Piaty krok vedie k historickej budove.",
+      "microGuide": "Najdi vstup do Starej radnice.",
+      "locationText": "Pokracujte Dolnou ruzovou ulicou nadol, az zidete na hlavnu cestu.",
+      "location": {
+        "lat": 48.1472,
+        "lng": 17.126946,
+        "label": "Kostol sv. Katariny"
+      },
+      "task": {
+        "type": "code",
+        "question": "Ake cislo vchodu ma dom od ktoreho? bola odfotena tato fotka kostola? (zadaj jedno cislo)",
+        "answer": "15",
+        "hints": [
+          "Nebola odfotena priamo z hlavnej ulice."
+        ],
+        "failsafe": "Ak je nacko skryty, vyber 160cm a pokracuj.",
+        "media": [
+        ]
+      }
+    },
+    {
+      "id": "cp-10-stary",
+      "order": 11,
+      "title": "Stary Zamok",
+      "storyBeat": "Piaty krok vedie k historickej budove.",
+      "microGuide": "Najdi vstup do Starej radnice.",
+      "locationText": "Pokracujte Hlavnou ulicou nahor. Za radnicou zabocte doprava na schody za ozdobnym reliefom. A vyjdite nimi az k Staremu zamku.",
+      "location": {
+        "lat": 48.1472,
+        "lng": 17.126946,
+        "label": "Stary Zamok"
+      },
+      "task": {
+        "type": "code",
+        "question": "Kolko hodin dokopy ukazuje obrazok?",
+        "answer": "25",
+        "hints": [
+          "Kolko hodin by bol, keby tien ukazoval ako jednotlive ciary na obrazku?"
+        ],
+        "failsafe": "Ak je nacko skryty, vyber 160cm a pokracuj.",
+        "media": [
+        ]
+      }
+    }
+  ]
+}
