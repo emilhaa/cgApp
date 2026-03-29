@@ -245,6 +245,40 @@ function getCurrentProgress(game: GameContent): GameSessionProgress {
   return loadStoredProgress(game) ?? createInitialProgress(game);
 }
 
+export function enterSolvePhase(game: GameContent, checkpointId: string): GameSessionProgress | null {
+  const currentProgress = getCurrentProgress(game);
+  const checkpointIndex = currentProgress.checkpoints.findIndex(
+    (checkpoint) => checkpoint.checkpointId === checkpointId
+  );
+
+  if (checkpointIndex === -1) {
+    return null;
+  }
+
+  const currentCheckpoint = currentProgress.checkpoints[checkpointIndex];
+  if (currentCheckpoint.status !== "active" || currentCheckpoint.phase !== "go") {
+    return null;
+  }
+
+  const nextProgress: GameSessionProgress = {
+    ...currentProgress,
+    updatedAt: createTimestamp(),
+    checkpoints: currentProgress.checkpoints.map((checkpointState, index) => {
+      if (index !== checkpointIndex) {
+        return checkpointState;
+      }
+
+      return {
+        ...checkpointState,
+        phase: "solve"
+      };
+    })
+  };
+
+  persistProgress(nextProgress);
+  return nextProgress;
+}
+
 function buildAdvancedCheckpointProgress(
   game: GameContent,
   currentProgress: GameSessionProgress,
@@ -260,7 +294,7 @@ function buildAdvancedCheckpointProgress(
   }
 
   const currentCheckpoint = currentProgress.checkpoints[checkpointIndex];
-  if (currentCheckpoint.status !== "active") {
+  if (currentCheckpoint.status !== "active" || currentCheckpoint.phase !== "solve") {
     return null;
   }
 
@@ -348,7 +382,7 @@ export function revealNextHint(game: GameContent, checkpointId: string): GameSes
   const currentCheckpoint = currentProgress.checkpoints[checkpointIndex];
   const checkpointDefinition = game.checkpoints.find((checkpoint) => checkpoint.id === checkpointId);
 
-  if (!checkpointDefinition || currentCheckpoint.status !== "active") {
+  if (!checkpointDefinition || currentCheckpoint.status !== "active" || currentCheckpoint.phase !== "solve") {
     return null;
   }
 
@@ -387,7 +421,7 @@ export function revealCheckpointSolution(game: GameContent, checkpointId: string
   }
 
   const currentCheckpoint = currentProgress.checkpoints[checkpointIndex];
-  if (currentCheckpoint.status !== "active") {
+  if (currentCheckpoint.status !== "active" || currentCheckpoint.phase !== "solve") {
     return null;
   }
 
@@ -437,7 +471,7 @@ export function recordWrongAttempt(game: GameContent, checkpointId: string): Gam
   }
 
   const currentCheckpoint = currentProgress.checkpoints[checkpointIndex];
-  if (currentCheckpoint.status !== "active") {
+  if (currentCheckpoint.status !== "active" || currentCheckpoint.phase !== "solve") {
     return null;
   }
 

@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import rawGameContent from "@/src/content/game.sk.json";
 import { validateGameContent } from "@/src/core/contentValidation";
 import {
   completeCheckpoint,
+  enterSolvePhase,
   loadStoredProgress,
   recordWrongAttempt,
   revealCheckpointSolution,
@@ -22,7 +23,6 @@ const validationResult = validateGameContent(rawGameContent);
 
 export default function CheckpointDetailPage() {
   const params = useParams<{ id: string }>();
-  const router = useRouter();
 
   if (!validationResult.ok || !validationResult.data) {
     return (
@@ -100,6 +100,9 @@ export default function CheckpointDetailPage() {
     solutionShown: false,
     wrongAttemptCount: 0
   };
+  const isGoPhase = currentState === "active" && checkpointProgress.phase === "go";
+  const isSolvePhase = currentState === "active" && checkpointProgress.phase === "solve";
+  const isRevealPhase = checkpointProgress.phase === "reveal" || isSolved;
 
   function handleComplete() {
     const nextProgress = completeCheckpoint(game, activeCheckpoint.id);
@@ -111,14 +114,22 @@ export default function CheckpointDetailPage() {
     }
 
     setProgress(nextProgress);
-    if (nextProgress.isCompleted) {
-      router.push("/finish");
-      return { ok: true };
-    }
-
-    setStatusMessage("Správne. Tento checkpoint je hotový a ďalší sa odomkol.");
+    setStatusMessage(
+      nextProgress.isCompleted
+        ? "Checkpoint je hotový. Hra je dokončená a môžeš si pozrieť výsledok."
+        : "Správne. Tento checkpoint je hotový a ďalší sa odomkol."
+    );
 
     return { ok: true };
+  }
+
+  function handleEnterSolve() {
+    const nextProgress = enterSolvePhase(game, activeCheckpoint.id);
+    if (!nextProgress) {
+      return;
+    }
+
+    setProgress(nextProgress);
   }
 
   function handleRevealHint() {
@@ -157,12 +168,11 @@ export default function CheckpointDetailPage() {
     }
 
     setProgress(nextProgress);
-    if (nextProgress.isCompleted) {
-      router.push("/finish");
-      return { ok: true };
-    }
-
-    setStatusMessage("Checkpoint bol preskočený a ďalší sa odomkol.");
+    setStatusMessage(
+      nextProgress.isCompleted
+        ? "Checkpoint bol preskočený. Hra je dokončená a môžeš si pozrieť výsledok."
+        : "Checkpoint bol preskočený a ďalší sa odomkol."
+    );
     return { ok: true };
   }
 
@@ -196,16 +206,56 @@ export default function CheckpointDetailPage() {
               </Link>
             </div>
           </section>
-        ) : isSolved ? (
+        ) : isGoPhase ? (
           <section className="panel-card">
+            <p className="eyebrow">GO</p>
+            <h2 className="section-title">Kam máš ísť</h2>
+            <p className="section-copy">{activeCheckpoint.locationText}</p>
+            <div className="action-row">
+              <button className="action-button" onClick={handleEnterSolve} type="button">
+                Som na mieste
+              </button>
+              <Link className="action-link" href="/checkpoints">
+                Späť na prehľad
+              </Link>
+            </div>
+          </section>
+        ) : isSolvePhase ? (
+          <section className="panel-card">
+            <p className="eyebrow">SOLVE</p>
+            <h2 className="section-title">Zadanie</h2>
+            <div className="detail-stack">
+              <TaskRenderer
+                checkpoint={activeCheckpoint}
+                checkpointProgress={checkpointProgress}
+                onComplete={handleComplete}
+                onRevealHint={handleRevealHint}
+                onRevealSolution={handleRevealSolution}
+                onSkip={handleSkip}
+                onWrongAttempt={handleWrongAttempt}
+              />
+              <div className="action-row">
+                <Link className="secondary-action-link" href="/checkpoints">
+                  Späť na prehľad
+                </Link>
+              </div>
+            </div>
+          </section>
+        ) : isRevealPhase ? (
+          <section className="panel-card">
+            <p className="eyebrow">REVEAL</p>
             <h2 className="section-title">
               {currentState === "skipped" ? "Checkpoint je preskočený" : "Checkpoint je hotový"}
             </h2>
             <p className="section-copy">
               {currentState === "skipped"
-                ? "Tento checkpoint si preskočil. Môžeš sa vrátiť do prehľadu alebo pokračovať ďalej."
-                : "Tento checkpoint si už vyriešil. Môžeš sa vrátiť do prehľadu alebo pokračovať ďalej."}
+                ? "Tento checkpoint si preskočil. Cesta ďalej však ostáva otvorená."
+                : "Tento checkpoint máš úspešne za sebou."}
             </p>
+            <section className="support-card">
+              <p className="eyebrow">Micro Guide</p>
+              <p className="section-copy">{activeCheckpoint.microGuide}</p>
+            </section>
             {statusMessage ? <p className="feedback-box feedback-box--success">{statusMessage}</p> : null}
             <div className="action-row">
               <Link className="action-link" href="/checkpoints">
@@ -224,22 +274,12 @@ export default function CheckpointDetailPage() {
           </section>
         ) : (
           <section className="panel-card">
-            <h2 className="section-title">Zadanie</h2>
-            <div className="detail-stack">
-              <TaskRenderer
-                checkpoint={activeCheckpoint}
-                checkpointProgress={checkpointProgress}
-                onComplete={handleComplete}
-                onRevealHint={handleRevealHint}
-                onRevealSolution={handleRevealSolution}
-                onSkip={handleSkip}
-                onWrongAttempt={handleWrongAttempt}
-              />
-              <div className="action-row">
-                <Link className="secondary-action-link" href="/checkpoints">
-                  Späť na prehľad
-                </Link>
-              </div>
+            <h2 className="section-title">Fáza checkpointu sa nepodarila načítať</h2>
+            <p className="section-copy">Skús obnoviť stránku alebo sa vrátiť do prehľadu checkpointov.</p>
+            <div className="action-row">
+              <Link className="action-link" href="/checkpoints">
+                Späť na prehľad
+              </Link>
             </div>
           </section>
         )}

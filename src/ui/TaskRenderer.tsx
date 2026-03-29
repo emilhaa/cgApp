@@ -33,6 +33,7 @@ type TaskRendererProps = {
 
 function TaskMedia({ checkpoint }: { checkpoint: Checkpoint }) {
   const mediaItems = checkpoint.task.media ?? [];
+  const [failedMediaSources, setFailedMediaSources] = useState<string[]>([]);
 
   if (mediaItems.length === 0) {
     return null;
@@ -40,16 +41,31 @@ function TaskMedia({ checkpoint }: { checkpoint: Checkpoint }) {
 
   return (
     <div className="task-media-grid">
-      {mediaItems.map((mediaItem) => (
-        <figure className="task-media-card" key={mediaItem.src}>
-          <img
-            alt={mediaItem.alt ?? checkpoint.title}
-            className="task-media-image"
-            src={mediaItem.src}
-          />
-          {mediaItem.alt ? <figcaption className="task-media-caption">{mediaItem.alt}</figcaption> : null}
-        </figure>
-      ))}
+      {mediaItems.map((mediaItem) => {
+        if (failedMediaSources.includes(mediaItem.src)) {
+          return (
+            <section className="support-card support-card--warning" key={mediaItem.src}>
+              <p className="section-copy">Obrázok sa nepodarilo načítať: {mediaItem.src}</p>
+            </section>
+          );
+        }
+
+        return (
+          <figure className="task-media-card" key={mediaItem.src}>
+            <img
+              alt={mediaItem.alt ?? checkpoint.title}
+              className="task-media-image"
+              onError={() =>
+                setFailedMediaSources((currentSources) =>
+                  currentSources.includes(mediaItem.src) ? currentSources : [...currentSources, mediaItem.src]
+                )
+              }
+              src={mediaItem.src}
+            />
+            {mediaItem.alt ? <figcaption className="task-media-caption">{mediaItem.alt}</figcaption> : null}
+          </figure>
+        );
+      })}
     </div>
   );
 }
