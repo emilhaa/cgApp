@@ -1,4 +1,6 @@
 # Roadmap – City Game Štiavnica (PWA)
+> Poznámka: Tento dokument zachytáva stav pôvodnej aplikácie pred stratou kódu.
+> Aktuálny pracovný plán obnovy je v `REBUILD_PLAN.md`.
 
 Tento dokument je jednoduchý backlog/roadmap pre iterovanie MVP bez zbytočného chaosu.
 Každý bod má cieľ a akceptačné kritériá. Keď sa niečo implementuje, presuň to do **Done**.
