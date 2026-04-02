@@ -93,6 +93,7 @@ export interface GameSessionProgress {
   startedAt: string;
   updatedAt: string;
   activeCheckpointId: string;
+  resumeCheckpointId: string;
   isCompleted: boolean;
   completedAt: string | null;
   checkpoints: SessionCheckpointProgress[];

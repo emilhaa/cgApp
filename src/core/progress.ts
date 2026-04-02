@@ -141,6 +141,10 @@ function normalizeStoredProgress(value: unknown, game: GameContent): GameSession
     isCompleted
       ? (typeof value.completedAt === "string" && value.completedAt.length > 0 ? value.completedAt : value.updatedAt)
       : null;
+  const resumeCheckpointId =
+    typeof value.resumeCheckpointId === "string" && value.resumeCheckpointId.length > 0
+      ? value.resumeCheckpointId
+      : value.activeCheckpointId;
 
   if (activeStates.length === 1) {
     if (isCompleted) {
@@ -158,6 +162,7 @@ function normalizeStoredProgress(value: unknown, game: GameContent): GameSession
       startedAt: value.startedAt,
       updatedAt: value.updatedAt,
       activeCheckpointId: value.activeCheckpointId,
+      resumeCheckpointId,
       isCompleted,
       completedAt,
       checkpoints: normalizedCheckpoints
@@ -172,6 +177,7 @@ function normalizeStoredProgress(value: unknown, game: GameContent): GameSession
       startedAt: value.startedAt,
       updatedAt: value.updatedAt,
       activeCheckpointId: value.activeCheckpointId,
+      resumeCheckpointId,
       isCompleted: true,
       completedAt,
       checkpoints: normalizedCheckpoints
@@ -187,6 +193,14 @@ function persistProgress(progress: GameSessionProgress) {
   }
 
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+}
+
+export function clearStoredProgress() {
+  if (!canUseLocalStorage()) {
+    return;
+  }
+
+  window.localStorage.removeItem(STORAGE_KEY);
 }
 
 function touchProgress(progress: GameSessionProgress): GameSessionProgress {
@@ -212,6 +226,7 @@ export function createInitialProgress(game: GameContent): GameSessionProgress {
     startedAt: timestamp,
     updatedAt: timestamp,
     activeCheckpointId: firstCheckpoint.id,
+    resumeCheckpointId: firstCheckpoint.id,
     isCompleted: false,
     completedAt: null,
     checkpoints: game.checkpoints.map((checkpoint, index) => ({
@@ -273,6 +288,28 @@ export function enterSolvePhase(game: GameContent, checkpointId: string): GameSe
         phase: "solve"
       };
     })
+  };
+
+  persistProgress(nextProgress);
+  return nextProgress;
+}
+
+export function rememberVisitedCheckpoint(game: GameContent, checkpointId: string): GameSessionProgress | null {
+  const currentProgress = getCurrentProgress(game);
+  const checkpointExists = game.checkpoints.some((checkpoint) => checkpoint.id === checkpointId);
+
+  if (!checkpointExists) {
+    return null;
+  }
+
+  if (currentProgress.resumeCheckpointId === checkpointId) {
+    return currentProgress;
+  }
+
+  const nextProgress: GameSessionProgress = {
+    ...currentProgress,
+    updatedAt: createTimestamp(),
+    resumeCheckpointId: checkpointId
   };
 
   persistProgress(nextProgress);

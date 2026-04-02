@@ -22,15 +22,20 @@ export default function CheckpointsPage() {
     <main className="app-shell">
       <div className="page-frame">
         <section className="hero-card">
-          <p className="eyebrow">Prehľad hry</p>
-          <h1 className="page-title">Checkpointy</h1>
-          <p className="lead">
-            Tu vidíš všetky stanovištia v poradí a ich aktuálny stav. Zamknuté checkpointy ostávajú
-            viditeľné, ale odomknú sa až postupom v hre.
-          </p>
-          <Link className="action-link" href="/">
-            Späť na úvod
-          </Link>
+          <div className="hero-topbar">
+            <div>
+              <p className="eyebrow">Prehľad hry</p>
+              <h1 className="page-title">Checkpointy</h1>
+            </div>
+            <div className="corner-actions">
+              <Link className="corner-link" href="/">
+                Domov
+              </Link>
+              <Link aria-label="Pomoc a FAQ" className="corner-icon-link" href="/help">
+                ?
+              </Link>
+            </div>
+          </div>
         </section>
 
         <CheckpointOverview game={game} />

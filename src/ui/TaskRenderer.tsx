@@ -406,9 +406,7 @@ export function TaskRenderer({
             onChange={handlePhotoChange}
             type="file"
           />
-          <p className="section-copy">
-            Fotka ostáva len v tomto zariadení a v tejto dočasnej relácii. Nikam sa neposiela.
-          </p>
+          <p className="section-copy">Fotka sa použije len pre tento checkpoint a nikam sa neposiela.</p>
           {isPreparingPhoto ? <p className="section-copy">Pripravujem náhľad fotky...</p> : null}
           {photoPreview ? (
             <figure className="photo-preview-card">

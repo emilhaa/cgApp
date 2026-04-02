@@ -3,6 +3,7 @@ import type {
   GameContent,
   GameSessionProgress,
   GameTask,
+  Location,
   SessionCheckpointStatus
 } from "@/src/types/game";
 
@@ -133,6 +134,84 @@ export function getTaskHints(task: GameTask): string[] {
     .filter((hint) => hint.length > 0);
 
   return normalizedHints.filter((hint, index) => normalizedHints.indexOf(hint) === index).slice(0, 2);
+}
+
+export function buildOpenStreetMapEmbedUrl(location: Location): string {
+  const latOffset = 0.0026;
+  const lngOffset = 0.0038;
+  const left = String(location.lng - lngOffset);
+  const bottom = String(location.lat - latOffset);
+  const right = String(location.lng + lngOffset);
+  const top = String(location.lat + latOffset);
+  const marker = `${location.lat},${location.lng}`;
+
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(left)},${encodeURIComponent(bottom)},${encodeURIComponent(right)},${encodeURIComponent(top)}&layer=mapnik&marker=${encodeURIComponent(marker)}`;
+}
+
+export function buildNavigationUrl(
+  location: Location,
+  locationText: string,
+  platform: "ios" | "default"
+): string {
+  const destination = `${location.lat},${location.lng}`;
+
+  if (platform === "ios") {
+    const params = new URLSearchParams({
+      daddr: destination,
+      dirflg: "w",
+      q: location.label ?? locationText
+    });
+
+    return `https://maps.apple.com/?${params.toString()}`;
+  }
+
+  const params = new URLSearchParams({
+    api: "1",
+    destination,
+    travelmode: "walking"
+  });
+
+  return `https://www.google.com/maps/dir/?${params.toString()}`;
+}
+
+export function isLikelyIOSUserAgent(userAgent: string): boolean {
+  return /iPhone|iPad|iPod/i.test(userAgent);
+}
+
+export function calculateDistanceMeters(origin: Location, target: Location): number {
+  const earthRadiusMeters = 6371000;
+  const toRadians = (value: number) => (value * Math.PI) / 180;
+  const deltaLat = toRadians(target.lat - origin.lat);
+  const deltaLng = toRadians(target.lng - origin.lng);
+  const originLat = toRadians(origin.lat);
+  const targetLat = toRadians(target.lat);
+
+  const haversine =
+    Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2)
+    + Math.cos(originLat) * Math.cos(targetLat) * Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
+
+  const arc = 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+  return Math.round(earthRadiusMeters * arc);
+}
+
+export function formatApproximateDistance(distanceMeters: number): string {
+  if (distanceMeters >= 1000) {
+    return `${(distanceMeters / 1000).toFixed(1)} km`;
+  }
+
+  return `${distanceMeters} m`;
+}
+
+export function getDistanceFeedback(distanceMeters: number): string {
+  if (distanceMeters <= 50) {
+    return "Si na mieste.";
+  }
+
+  if (distanceMeters <= 180) {
+    return "Si blízko cieľa.";
+  }
+
+  return "Si ešte ďalej od cieľa.";
 }
 
 export function deriveFinishSummary(game: GameContent, progress: GameSessionProgress): FinishSummary {

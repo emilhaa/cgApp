@@ -9,11 +9,13 @@ import {
   enterSolvePhase,
   loadStoredProgress,
   recordWrongAttempt,
+  rememberVisitedCheckpoint,
   revealCheckpointSolution,
   revealNextHint,
   skipCheckpoint
 } from "@/src/core/progress";
 import { deriveCheckpointOverviewItems, getNextCheckpoint } from "@/src/core/gameLogic";
+import { CheckpointMap } from "@/src/ui/CheckpointMap";
 import { ContentErrorScreen } from "@/src/ui/ContentErrorScreen";
 import { TaskRenderer } from "@/src/ui/TaskRenderer";
 import type { GameSessionProgress, SessionCheckpointProgress } from "@/src/types/game";
@@ -48,6 +50,22 @@ export default function CheckpointDetailPage() {
     setStatusMessage(null);
   }, [game, checkpointId]);
 
+  const overviewItems = checkpoint ? deriveCheckpointOverviewItems(game, progress) : [];
+  const currentItem = checkpoint ? overviewItems.find((item) => item.checkpoint.id === checkpoint.id) ?? null : null;
+  const currentState = checkpoint ? (currentItem?.state ?? (checkpoint.order === 1 ? "active" : "locked")) : "locked";
+  const isLocked = currentState === "locked";
+
+  useEffect(() => {
+    if (!isHydrated || !checkpoint || isLocked) {
+      return;
+    }
+
+    const nextProgress = rememberVisitedCheckpoint(game, checkpoint.id);
+    if (nextProgress) {
+      setProgress(nextProgress);
+    }
+  }, [checkpoint, game, isHydrated, isLocked]);
+
   if (!checkpoint) {
     return (
       <main className="app-shell">
@@ -55,10 +73,10 @@ export default function CheckpointDetailPage() {
           <section className="panel-card">
             <p className="eyebrow">Checkpoint</p>
             <h1 className="section-title">Checkpoint sa nenašiel</h1>
-            <p className="section-copy">Skús sa vrátiť do prehľadu a otvoriť dostupný checkpoint.</p>
+            <p className="section-copy">Skús sa vrátiť na úvod a pokračovať z dostupného checkpointu.</p>
             <div className="action-row">
-              <Link className="action-link" href="/checkpoints">
-                Späť na prehľad
+              <Link className="action-link" href="/">
+                Domov
               </Link>
             </div>
           </section>
@@ -76,19 +94,14 @@ export default function CheckpointDetailPage() {
           <section className="panel-card">
             <p className="eyebrow">Checkpoint</p>
             <h1 className="section-title">Pripravujem checkpoint</h1>
-            <p className="section-copy">Načítavam stav tvojej hry v tomto zariadení.</p>
+            <p className="section-copy">Načítavam checkpoint.</p>
           </section>
         </div>
       </main>
     );
   }
-
-  const overviewItems = deriveCheckpointOverviewItems(game, progress);
-  const currentItem = overviewItems.find((item) => item.checkpoint.id === activeCheckpoint.id) ?? null;
-  const currentState = currentItem?.state ?? (activeCheckpoint.order === 1 ? "active" : "locked");
   const nextCheckpoint = getNextCheckpoint(game, activeCheckpoint.id);
   const isSolved = currentState === "done" || currentState === "skipped";
-  const isLocked = currentState === "locked";
   const isSessionCompleted = progress?.isCompleted ?? false;
   const checkpointProgress: SessionCheckpointProgress = progress?.checkpoints.find(
     (checkpointState) => checkpointState.checkpointId === activeCheckpoint.id
@@ -189,40 +202,40 @@ export default function CheckpointDetailPage() {
     <main className="app-shell">
       <div className="page-frame">
         <section className="hero-card">
-          <p className="eyebrow">Checkpoint {activeCheckpoint.order}</p>
-          <h1 className="page-title">{activeCheckpoint.title}</h1>
+          <div className="hero-topbar">
+            <div>
+              <h1 className="page-title">{activeCheckpoint.title}</h1>
+            </div>
+            <div className="corner-actions">
+              <Link className="corner-link" href="/">
+                Domov
+              </Link>
+              <Link aria-label="Pomoc a FAQ" className="corner-icon-link" href="/help">
+                ?
+              </Link>
+            </div>
+          </div>
           <p className="lead">{activeCheckpoint.storyBeat}</p>
         </section>
 
         {isLocked ? (
           <section className="panel-card">
             <h2 className="section-title">Tento checkpoint je ešte zamknutý</h2>
-            <p className="section-copy">
-              Najprv dokonči aktívny checkpoint. Potom sa tento odomkne v prehľade checkpointov.
-            </p>
-            <div className="action-row">
-              <Link className="action-link" href="/checkpoints">
-                Späť na prehľad
-              </Link>
-            </div>
+            <p className="section-copy">Najprv dokonči aktuálny checkpoint. Potom sa odomkne aj tento.</p>
           </section>
         ) : isGoPhase ? (
           <section className="panel-card">
-            <p className="eyebrow">GO</p>
             <h2 className="section-title">Kam máš ísť</h2>
             <p className="section-copy">{activeCheckpoint.locationText}</p>
+            {activeCheckpoint.location ? <CheckpointMap checkpoint={activeCheckpoint} /> : null}
             <div className="action-row">
               <button className="action-button" onClick={handleEnterSolve} type="button">
                 Som na mieste
               </button>
-              <Link className="action-link" href="/checkpoints">
-                Späť na prehľad
-              </Link>
             </div>
           </section>
         ) : isSolvePhase ? (
           <section className="panel-card">
-            <p className="eyebrow">SOLVE</p>
             <h2 className="section-title">Zadanie</h2>
             <div className="detail-stack">
               <TaskRenderer
@@ -234,16 +247,10 @@ export default function CheckpointDetailPage() {
                 onSkip={handleSkip}
                 onWrongAttempt={handleWrongAttempt}
               />
-              <div className="action-row">
-                <Link className="secondary-action-link" href="/checkpoints">
-                  Späť na prehľad
-                </Link>
-              </div>
             </div>
           </section>
         ) : isRevealPhase ? (
           <section className="panel-card">
-            <p className="eyebrow">REVEAL</p>
             <h2 className="section-title">
               {currentState === "skipped" ? "Checkpoint je preskočený" : "Checkpoint je hotový"}
             </h2>
@@ -258,15 +265,12 @@ export default function CheckpointDetailPage() {
             </section>
             {statusMessage ? <p className="feedback-box feedback-box--success">{statusMessage}</p> : null}
             <div className="action-row">
-              <Link className="action-link" href="/checkpoints">
-                Späť na prehľad
-              </Link>
               {nextCheckpoint ? (
-                <Link className="secondary-action-link" href={`/checkpoints/${nextCheckpoint.id}`}>
+                <Link className="action-link" href={`/checkpoints/${nextCheckpoint.id}`}>
                   Pokračovať na ďalší checkpoint
                 </Link>
               ) : isSessionCompleted ? (
-                <Link className="secondary-action-link" href="/finish">
+                <Link className="action-link" href="/finish">
                   Pozrieť výsledok hry
                 </Link>
               ) : null}
@@ -275,12 +279,7 @@ export default function CheckpointDetailPage() {
         ) : (
           <section className="panel-card">
             <h2 className="section-title">Fáza checkpointu sa nepodarila načítať</h2>
-            <p className="section-copy">Skús obnoviť stránku alebo sa vrátiť do prehľadu checkpointov.</p>
-            <div className="action-row">
-              <Link className="action-link" href="/checkpoints">
-                Späť na prehľad
-              </Link>
-            </div>
+            <p className="section-copy">Skús obnoviť stránku alebo sa vrátiť na úvod.</p>
           </section>
         )}
       </div>

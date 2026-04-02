@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
+  clearStoredProgress,
   continueStoredProgress,
   loadStoredProgress,
-  restartProgress,
   startNewProgress
 } from "@/src/core/progress";
 import type { GameContent, GameSessionProgress } from "@/src/types/game";
@@ -48,6 +49,12 @@ const infoCardStyle = {
   background: "rgba(240, 228, 200, 0.36)"
 };
 
+const infoValueStyle = {
+  margin: "6px 0 0",
+  fontSize: "1.05rem",
+  fontWeight: 700
+};
+
 const statusTextStyle = {
   marginTop: "14px",
   padding: "12px 14px",
@@ -58,34 +65,22 @@ const statusTextStyle = {
   lineHeight: 1.5
 };
 
-function shortSessionId(sessionId: string) {
-  return sessionId.length > 8 ? sessionId.slice(0, 8) : sessionId;
-}
-
 function getActiveCheckpointTitle(game: GameContent, progress: GameSessionProgress | null) {
   if (progress?.isCompleted) {
     return "Hra dokončená";
   }
 
-  const activeCheckpointId = progress?.activeCheckpointId ?? game.checkpoints[0]?.id;
+  const activeCheckpointId = progress?.resumeCheckpointId ?? progress?.activeCheckpointId ?? game.checkpoints[0]?.id;
   const activeCheckpoint = game.checkpoints.find((checkpoint) => checkpoint.id === activeCheckpointId);
   return activeCheckpoint?.title ?? game.checkpoints[0]?.title ?? "Prvý checkpoint";
 }
 
-function getCompletedCount(progress: GameSessionProgress | null) {
-  if (!progress) {
-    return 0;
-  }
-
-  return progress.checkpoints.filter(
-    (checkpoint) => checkpoint.status === "done" || checkpoint.status === "skipped"
-  ).length;
-}
-
 export function LandingActions({ game }: LandingActionsProps) {
+  const router = useRouter();
   const [progress, setProgress] = useState<GameSessionProgress | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isOpeningCheckpoint, setIsOpeningCheckpoint] = useState(false);
 
   useEffect(() => {
     const storedProgress = loadStoredProgress(game);
@@ -96,10 +91,12 @@ export function LandingActions({ game }: LandingActionsProps) {
   function handleStart() {
     try {
       const nextProgress = startNewProgress(game);
-      setProgress(nextProgress);
-      setStatusMessage(`Nová hra bola vytvorená. ID hry: ${shortSessionId(nextProgress.session_id)}.`);
+      setIsOpeningCheckpoint(true);
+      setStatusMessage(null);
+      router.replace(`/checkpoints/${nextProgress.activeCheckpointId}`);
     } catch {
-      setStatusMessage("Novú hru sa nepodarilo uložiť v tomto prehliadači.");
+      setIsOpeningCheckpoint(false);
+      setStatusMessage("Hru sa teraz nepodarilo pripraviť. Skús to prosím znova.");
     }
   }
 
@@ -108,34 +105,34 @@ export function LandingActions({ game }: LandingActionsProps) {
       const nextProgress = continueStoredProgress(game);
       if (!nextProgress) {
         setProgress(null);
-        setStatusMessage("Uložený postup sa nepodarilo načítať.");
+        setIsOpeningCheckpoint(false);
+        setStatusMessage("Nepodarilo sa nadviazať na predchádzajúcu hru.");
         return;
       }
 
-      setProgress(nextProgress);
-      setStatusMessage(`Pokračuješ v uloženej hre ${shortSessionId(nextProgress.session_id)}.`);
+      setIsOpeningCheckpoint(true);
+      setStatusMessage(null);
+      router.replace(`/checkpoints/${nextProgress.resumeCheckpointId}`);
     } catch {
-      setStatusMessage("Pri načítaní uloženej hry nastal problém.");
+      setIsOpeningCheckpoint(false);
+      setStatusMessage("Pokračovanie sa teraz nepodarilo otvoriť. Skús to prosím znova.");
     }
   }
 
   function handleRestart() {
-    const shouldRestart = window.confirm(
-      "Naozaj chcete vymazať uložený progres a začať znovu od prvého checkpointu?"
-    );
+    const shouldRestart = window.confirm("Naozaj chceš začať odznova? Vrátiš sa na prvý checkpoint.");
 
     if (!shouldRestart) {
       return;
     }
 
     try {
-      const nextProgress = restartProgress(game);
-      setProgress(nextProgress);
-      setStatusMessage(
-        `Hra bola resetovaná. Začína nová hra s ID ${shortSessionId(nextProgress.session_id)}.`
-      );
+      clearStoredProgress();
+      setProgress(null);
+      setStatusMessage(null);
+      router.push("/");
     } catch {
-      setStatusMessage("Hru sa nepodarilo resetovať v tomto prehliadači.");
+      setStatusMessage("Hru sa teraz nepodarilo začať odznova. Skús to prosím znova.");
     }
   }
 
@@ -144,7 +141,17 @@ export function LandingActions({ game }: LandingActionsProps) {
       <section className="panel-card">
         <p className="eyebrow">Pripravené</p>
         <h2 className="section-title">Chvíľu strpenia</h2>
-        <p className="section-copy">Pripravujem tvoju hru v tomto zariadení.</p>
+        <p className="section-copy">Pripravujem tvoju hru.</p>
+      </section>
+    );
+  }
+
+  if (isOpeningCheckpoint) {
+    return (
+      <section className="panel-card">
+        <p className="eyebrow">Hra sa začína</p>
+        <h2 className="section-title">Otváram checkpoint</h2>
+        <p className="section-copy">Chvíľu strpenia, presúvam ťa na miesto, kde máš pokračovať.</p>
       </section>
     );
   }
@@ -152,7 +159,6 @@ export function LandingActions({ game }: LandingActionsProps) {
   const hasStoredProgress = progress !== null;
   const isCompleted = progress?.isCompleted ?? false;
   const activeCheckpointTitle = getActiveCheckpointTitle(game, progress);
-  const completedCount = getCompletedCount(progress);
 
   return (
     <section className="panel-card">
@@ -160,14 +166,14 @@ export function LandingActions({ game }: LandingActionsProps) {
         {isCompleted ? "Dokončené" : hasStoredProgress ? "Pokračovanie" : "Začiatok hry"}
       </p>
       <h2 className="section-title">
-        {isCompleted ? "Hra je už dohraná" : hasStoredProgress ? "Môžeš pokračovať" : "Môžeš začať"}
+        {isCompleted ? "Hra je už dohraná" : hasStoredProgress ? "Môžeš pokračovať" : "Spusti hru"}
       </h2>
       <p className="section-copy">
         {isCompleted
-          ? "Na tomto zariadení je uložená dokončená hra. Môžeš si pozrieť výsledok alebo začať novú session."
+          ? "Tvoja hra je úspešne dohraná. Môžeš si pozrieť výsledok alebo sa vydať na trasu znova."
           : hasStoredProgress
-          ? "Na tomto zariadení je uložená rozhraná hra. Pokračuj od posledného aktívneho stanovišťa alebo začni odznova."
-          : "Po štarte sa hra uloží priamo do tohto prehliadača, takže sa k nej môžeš neskôr vrátiť."}
+          ? "Na trase na teba čaká ďalší checkpoint. Môžeš pokračovať alebo sa vrátiť na začiatok."
+          : "Keď budeš pripravený, vyraz na prvý checkpoint."}
       </p>
 
       <div style={buttonRowStyle}>
@@ -191,7 +197,7 @@ export function LandingActions({ game }: LandingActionsProps) {
           </>
         ) : (
           <button style={primaryButtonStyle} type="button" onClick={handleStart}>
-            Začať hru
+            Spustiť hru
           </button>
         )}
       </div>
@@ -203,27 +209,9 @@ export function LandingActions({ game }: LandingActionsProps) {
       ) : null}
 
       {progress ? (
-        <div key={progress.session_id} style={infoCardStyle}>
-          <div className="meta-grid" style={{ marginTop: 0 }}>
-            <div className="meta-item">
-              <span className="meta-label">ID hry</span>
-              <span className="meta-value">{shortSessionId(progress.session_id)}</span>
-            </div>
-            <div className="meta-item">
-              <span className="meta-label">{isCompleted ? "Stav hry" : "Kam budeš pokračovať"}</span>
-              <span className="meta-value">{activeCheckpointTitle}</span>
-            </div>
-            <div className="meta-item">
-              <span className="meta-label">Hotové stanovištia</span>
-              <span className="meta-value">
-                {completedCount} / {game.checkpoints.length}
-              </span>
-            </div>
-            <div className="meta-item">
-              <span className="meta-label">Uloženie</span>
-              <span className="meta-value">V tomto zariadení</span>
-            </div>
-          </div>
+        <div style={infoCardStyle}>
+          <span className="meta-label">{isCompleted ? "Stav hry" : "Ďalší checkpoint"}</span>
+          <p style={infoValueStyle}>{activeCheckpointTitle}</p>
         </div>
       ) : null}
     </section>

@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import rawGameContent from "@/src/content/game.sk.json";
 import { validateGameContent } from "@/src/core/contentValidation";
 import { deriveFinishSummary } from "@/src/core/gameLogic";
-import { loadStoredProgress, restartProgress } from "@/src/core/progress";
+import { clearStoredProgress, loadStoredProgress } from "@/src/core/progress";
 import { ContentErrorScreen } from "@/src/ui/ContentErrorScreen";
 import type { GameSessionProgress } from "@/src/types/game";
 
@@ -40,9 +40,9 @@ export default function FinishPage() {
   const game = validationResult.data;
 
   function handleRestart() {
-    const nextProgress = restartProgress(game);
-    setProgress(nextProgress);
-    router.push("/checkpoints");
+    clearStoredProgress();
+    setProgress(null);
+    router.push("/");
   }
 
   if (!isHydrated) {
@@ -52,7 +52,7 @@ export default function FinishPage() {
           <section className="panel-card">
             <p className="eyebrow">Výsledok hry</p>
             <h1 className="section-title">Pripravujem výsledok</h1>
-            <p className="section-copy">Načítavam uložený priebeh tejto hry v zariadení.</p>
+            <p className="section-copy">Pripravujem výsledok tvojej hry.</p>
           </section>
         </div>
       </main>
@@ -70,10 +70,7 @@ export default function FinishPage() {
               Dokonči alebo preskoč všetky checkpointy a potom sa sem zobrazí finálny súhrn hry.
             </p>
             <div className="action-row">
-              <Link className="action-link" href="/checkpoints">
-                Späť na prehľad checkpointov
-              </Link>
-              <Link className="secondary-action-link" href="/">
+              <Link className="action-link" href="/">
                 Späť na úvod
               </Link>
             </div>
@@ -89,15 +86,25 @@ export default function FinishPage() {
     <main className="app-shell">
       <div className="page-frame">
         <section className="hero-card">
-          <p className="eyebrow">Výsledok hry</p>
-          <h1 className="page-title">Hra je úspešne dokončená</h1>
-          <p className="lead">
-            Prešiel si celú hru v tomto zariadení. Nižšie vidíš stručný súhrn toho, ako prebiehala.
-          </p>
+          <div className="hero-topbar">
+            <div>
+              <p className="eyebrow">Výsledok hry</p>
+              <h1 className="page-title">Hra je úspešne dokončená</h1>
+            </div>
+            <div className="corner-actions">
+              <Link className="corner-link" href="/">
+                Domov
+              </Link>
+              <Link aria-label="Pomoc a FAQ" className="corner-icon-link" href="/help">
+                ?
+              </Link>
+            </div>
+          </div>
+          <p className="lead">Prešiel si celú hru. Nižšie nájdeš krátky súhrn tvojej cesty mestom.</p>
         </section>
 
         <section className="panel-card">
-          <h2 className="section-title">Súhrn session</h2>
+          <h2 className="section-title">Súhrn hry</h2>
           <div className="summary-grid">
             <div className="summary-card">
               <span className="summary-label">Počet checkpointov</span>
@@ -128,10 +135,7 @@ export default function FinishPage() {
 
         <section className="panel-card">
           <div className="action-row">
-            <Link className="action-link" href="/checkpoints">
-              Späť na prehľad checkpointov
-            </Link>
-            <button className="secondary-action-button" onClick={handleRestart} type="button">
+            <button className="action-button" onClick={handleRestart} type="button">
               Začať hru odznova
             </button>
           </div>
