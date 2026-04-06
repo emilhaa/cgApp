@@ -132,3 +132,9 @@ docs/
   roadmap.md
   env.md
   REBUILD_PLAN.md
+
+
+# Status
+Rebuild core MVP is complete.
+The app has been restored to functional parity for the recovered MVP.
+Further work continues as normal product iteration.

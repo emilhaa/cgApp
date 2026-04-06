@@ -9,6 +9,7 @@ import type {
   MediaItem,
   MultipleChoiceTask,
   PhotoPoseTask,
+  PhotoVerificationConfig,
   PhotoVerifyConfig,
   SequenceTask,
   TaskType
@@ -150,8 +151,11 @@ function validatePhotoVerifyConfig(
     pushError(errors, `${path}.requirements`, "Photo verify requirements must be a non-empty string array.");
   }
 
-  if (value.pass_confidence !== undefined && !isNumber(value.pass_confidence)) {
-    pushError(errors, `${path}.pass_confidence`, "Photo verify pass_confidence must be a number when present.");
+  if (
+    value.pass_confidence !== undefined &&
+    (!isNumber(value.pass_confidence) || value.pass_confidence < 0 || value.pass_confidence > 1)
+  ) {
+    pushError(errors, `${path}.pass_confidence`, "Photo verify pass_confidence must be a number between 0 and 1.");
   }
 
   if (
@@ -167,8 +171,35 @@ function validatePhotoVerifyConfig(
 
   return {
     requirements: value.requirements,
-    pass_confidence: isNumber(value.pass_confidence) ? value.pass_confidence : undefined,
+    pass_confidence:
+      isNumber(value.pass_confidence) && value.pass_confidence >= 0 && value.pass_confidence <= 1
+        ? value.pass_confidence
+        : undefined,
     max_attempts: Number.isInteger(value.max_attempts) ? (value.max_attempts as number) : undefined
+  };
+}
+
+function validatePhotoVerificationConfig(
+  value: unknown,
+  path: string,
+  errors: ContentIssue[]
+): PhotoVerificationConfig | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!isRecord(value)) {
+    pushError(errors, path, "Photo verification config must be an object.");
+    return undefined;
+  }
+
+  if (value.mode !== "pose_match") {
+    pushError(errors, `${path}.mode`, 'Photo verification mode must be "pose_match".');
+    return undefined;
+  }
+
+  return {
+    mode: "pose_match"
   };
 }
 
@@ -303,11 +334,18 @@ function validateTask(value: unknown, path: string, errors: ContentIssue[], warn
       return task;
     }
     case "photo_pose": {
+      if (!isNonEmptyString(value.hint1)) {
+        pushError(errors, `${path}.hint1`, "Photo pose task hint1 must be a non-empty string.");
+        return null;
+      }
+
+      const verification = validatePhotoVerificationConfig(value.verification, `${path}.verification`, errors);
       const verify = validatePhotoVerifyConfig(value.verify, `${path}.verify`, errors);
 
       const task: PhotoPoseTask = {
         ...commonFields,
         type: "photo_pose",
+        verification,
         verify
       };
 

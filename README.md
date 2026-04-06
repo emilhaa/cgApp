@@ -4,19 +4,12 @@ This repository contains the rebuild of the City Game Stiavnica web app.
 
 ## Current Status
 
-Step 1 is in place:
-- Next.js + TypeScript + App Router shell
-- typed game content models
-- runtime content loading
-- runtime content validation
-- friendly content error screen for blocking issues
-
-Not implemented yet:
-- player progress
-- checkpoint solving flow
-- maps, GPS, help, finish flow
-- photo task UI
-- photo AI verification
+Current MVP includes:
+- landing, checkpoint flow, finish screen, help page
+- local progress in `localStorage`
+- content validation from `src/content/game.sk.json`
+- playable task types: `code`, `multiple_choice`, `sequence`, `photo_pose`
+- photo task AI verification via `/api/verify-photo`
 
 ## Scripts
 
@@ -33,11 +26,22 @@ npm run start
 npm run typecheck
 ```
 
+## Environment
+
+Create `.env.local` with:
+
+```bash
+OPENAI_API_KEY=your_openai_api_key
+PHOTO_MODERATION=1
+```
+
+- `OPENAI_API_KEY`: required for `/api/verify-photo`
+- `PHOTO_MODERATION`: optional, defaults to `1`
+- set `PHOTO_MODERATION=0` to disable image moderation before AI verification
+
 ## Content Source
 
 The game content currently lives in `src/content/game.sk.json`.
-
-`photo_pose` is accepted by the loader and validator, but it is not rendered as an interactive task yet.
 
 ## Rebuild Rules
 

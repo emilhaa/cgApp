@@ -1,6 +1,7 @@
 import type {
   GameContent,
   GameSessionProgress,
+  PhotoVerifyResponse,
   SessionCheckpointPhase,
   SessionCheckpointProgress,
   SessionCheckpointStatus
@@ -9,11 +10,18 @@ import { getNextCheckpoint, getTaskHints } from "@/src/core/gameLogic";
 
 const STORAGE_KEY = "city-game-stiavnica:progress";
 const STORAGE_VERSION = 1 as const;
+const MAX_STORED_PROGRESS_LENGTH = 1_500_000;
 
 const VALID_CHECKPOINT_STATUSES: SessionCheckpointStatus[] = ["locked", "active", "done", "skipped"];
 const VALID_CHECKPOINT_PHASES: SessionCheckpointPhase[] = ["go", "solve", "reveal"];
 
 type UnknownRecord = Record<string, unknown>;
+type CheckpointCompletionState = {
+  photoProvided?: boolean;
+  photoPreview?: string | null;
+  photoVerifyAttemptCount?: number;
+  photoVerifyLastResult?: PhotoVerifyResponse | null;
+};
 
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -31,7 +39,9 @@ function getDefaultCheckpointUiState() {
   return {
     usedHintCount: 0,
     solutionShown: false,
-    wrongAttemptCount: 0
+    wrongAttemptCount: 0,
+    photoProvided: false,
+    photoVerifyAttemptCount: 0
   };
 }
 
@@ -41,6 +51,33 @@ function createSessionId() {
   }
 
   return `session-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function normalizePhotoVerifyResponse(value: unknown): PhotoVerifyResponse | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const verdict = value.verdict;
+  if (verdict !== "pass" && verdict !== "fail" && verdict !== "unsure") {
+    return undefined;
+  }
+
+  if (typeof value.confidence !== "number" || !Number.isFinite(value.confidence)) {
+    return undefined;
+  }
+
+  if (typeof value.feedback_sk !== "string" || value.feedback_sk.trim().length === 0) {
+    return undefined;
+  }
+
+  return {
+    verdict,
+    confidence: Math.max(0, Math.min(1, value.confidence)),
+    feedback_sk: value.feedback_sk,
+    blocked: typeof value.blocked === "boolean" ? value.blocked : undefined,
+    error_code: typeof value.error_code === "string" && value.error_code.length > 0 ? value.error_code : undefined
+  };
 }
 
 function normalizeCheckpointState(
@@ -72,6 +109,16 @@ function normalizeCheckpointState(
     typeof value.wrongAttemptCount === "number" && Number.isInteger(value.wrongAttemptCount) && value.wrongAttemptCount >= 0
       ? value.wrongAttemptCount
       : 0;
+  const photoPreview =
+    typeof value.photoPreview === "string" && value.photoPreview.length > 0 ? value.photoPreview : undefined;
+  const photoProvided = typeof value.photoProvided === "boolean" ? value.photoProvided : Boolean(photoPreview);
+  const photoVerifyAttemptCount =
+    typeof value.photoVerifyAttemptCount === "number"
+    && Number.isInteger(value.photoVerifyAttemptCount)
+    && value.photoVerifyAttemptCount >= 0
+      ? value.photoVerifyAttemptCount
+      : 0;
+  const photoVerifyLastResult = normalizePhotoVerifyResponse(value.photoVerifyLastResult);
 
   return {
     checkpointId: expectedCheckpointId,
@@ -79,7 +126,11 @@ function normalizeCheckpointState(
     phase: value.phase as SessionCheckpointPhase,
     usedHintCount,
     solutionShown,
-    wrongAttemptCount
+    wrongAttemptCount,
+    photoProvided,
+    photoPreview,
+    photoVerifyAttemptCount,
+    photoVerifyLastResult
   };
 }
 
@@ -187,12 +238,43 @@ function normalizeStoredProgress(value: unknown, game: GameContent): GameSession
   return null;
 }
 
-function persistProgress(progress: GameSessionProgress) {
+function stripPhotoPreviews(progress: GameSessionProgress): GameSessionProgress {
+  return {
+    ...progress,
+    checkpoints: progress.checkpoints.map((checkpoint) => {
+      if (!checkpoint.photoPreview) {
+        return checkpoint;
+      }
+
+      const { photoPreview: _photoPreview, ...rest } = checkpoint;
+      return rest;
+    })
+  };
+}
+
+function persistProgress(progress: GameSessionProgress): GameSessionProgress | null {
   if (!canUseLocalStorage()) {
-    return;
+    return progress;
   }
 
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+  const candidates = [progress, stripPhotoPreviews(progress)];
+
+  for (const candidate of candidates) {
+    const serializedCandidate = JSON.stringify(candidate);
+
+    if (serializedCandidate.length > MAX_STORED_PROGRESS_LENGTH) {
+      continue;
+    }
+
+    try {
+      window.localStorage.setItem(STORAGE_KEY, serializedCandidate);
+      return candidate;
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
 }
 
 export function clearStoredProgress() {
@@ -260,6 +342,69 @@ function getCurrentProgress(game: GameContent): GameSessionProgress {
   return loadStoredProgress(game) ?? createInitialProgress(game);
 }
 
+function mergeCompletionState(
+  checkpointState: SessionCheckpointProgress,
+  completionState?: CheckpointCompletionState
+): SessionCheckpointProgress {
+  if (!completionState) {
+    return checkpointState;
+  }
+
+  const nextCheckpointState: SessionCheckpointProgress = { ...checkpointState };
+
+  if ("photoProvided" in completionState && typeof completionState.photoProvided === "boolean") {
+    nextCheckpointState.photoProvided = completionState.photoProvided;
+  }
+
+  if ("photoPreview" in completionState) {
+    nextCheckpointState.photoPreview = completionState.photoPreview ?? undefined;
+  }
+
+  if ("photoVerifyAttemptCount" in completionState && typeof completionState.photoVerifyAttemptCount === "number") {
+    nextCheckpointState.photoVerifyAttemptCount = completionState.photoVerifyAttemptCount;
+  }
+
+  if ("photoVerifyLastResult" in completionState) {
+    nextCheckpointState.photoVerifyLastResult = completionState.photoVerifyLastResult ?? undefined;
+  }
+
+  return nextCheckpointState;
+}
+
+function updateActiveSolveCheckpoint(
+  game: GameContent,
+  checkpointId: string,
+  updater: (checkpointState: SessionCheckpointProgress) => SessionCheckpointProgress
+): GameSessionProgress | null {
+  const currentProgress = getCurrentProgress(game);
+  const checkpointIndex = currentProgress.checkpoints.findIndex(
+    (checkpoint) => checkpoint.checkpointId === checkpointId
+  );
+
+  if (checkpointIndex === -1) {
+    return null;
+  }
+
+  const currentCheckpoint = currentProgress.checkpoints[checkpointIndex];
+  if (currentCheckpoint.status !== "active" || currentCheckpoint.phase !== "solve") {
+    return null;
+  }
+
+  const nextProgress: GameSessionProgress = {
+    ...currentProgress,
+    updatedAt: createTimestamp(),
+    checkpoints: currentProgress.checkpoints.map((checkpointState, index) => {
+      if (index !== checkpointIndex) {
+        return checkpointState;
+      }
+
+      return updater(checkpointState);
+    })
+  };
+
+  return persistProgress(nextProgress);
+}
+
 export function enterSolvePhase(game: GameContent, checkpointId: string): GameSessionProgress | null {
   const currentProgress = getCurrentProgress(game);
   const checkpointIndex = currentProgress.checkpoints.findIndex(
@@ -290,8 +435,7 @@ export function enterSolvePhase(game: GameContent, checkpointId: string): GameSe
     })
   };
 
-  persistProgress(nextProgress);
-  return nextProgress;
+  return persistProgress(nextProgress);
 }
 
 export function rememberVisitedCheckpoint(game: GameContent, checkpointId: string): GameSessionProgress | null {
@@ -312,15 +456,15 @@ export function rememberVisitedCheckpoint(game: GameContent, checkpointId: strin
     resumeCheckpointId: checkpointId
   };
 
-  persistProgress(nextProgress);
-  return nextProgress;
+  return persistProgress(nextProgress);
 }
 
 function buildAdvancedCheckpointProgress(
   game: GameContent,
   currentProgress: GameSessionProgress,
   checkpointId: string,
-  nextStatus: "done" | "skipped"
+  nextStatus: "done" | "skipped",
+  completionState?: CheckpointCompletionState
 ): GameSessionProgress | null {
   const checkpointIndex = currentProgress.checkpoints.findIndex(
     (checkpoint) => checkpoint.checkpointId === checkpointId
@@ -348,7 +492,7 @@ function buildAdvancedCheckpointProgress(
     checkpoints: currentProgress.checkpoints.map((checkpointState, index) => {
       if (index === checkpointIndex) {
         return {
-          ...checkpointState,
+          ...mergeCompletionState(checkpointState, completionState),
           status: nextStatus,
           phase: "reveal"
         };
@@ -373,8 +517,7 @@ function buildAdvancedCheckpointProgress(
 
 export function startNewProgress(game: GameContent): GameSessionProgress {
   const progress = createInitialProgress(game);
-  persistProgress(progress);
-  return progress;
+  return persistProgress(progress) ?? progress;
 }
 
 export function continueStoredProgress(game: GameContent): GameSessionProgress | null {
@@ -384,26 +527,52 @@ export function continueStoredProgress(game: GameContent): GameSessionProgress |
   }
 
   const touchedProgress = touchProgress(progress);
-  persistProgress(touchedProgress);
-  return touchedProgress;
+  return persistProgress(touchedProgress) ?? touchedProgress;
 }
 
 export function restartProgress(game: GameContent): GameSessionProgress {
   const progress = createInitialProgress(game);
-  persistProgress(progress);
-  return progress;
+  return persistProgress(progress) ?? progress;
 }
 
-export function completeCheckpoint(game: GameContent, checkpointId: string): GameSessionProgress | null {
+export function completeCheckpoint(
+  game: GameContent,
+  checkpointId: string,
+  completionState?: CheckpointCompletionState
+): GameSessionProgress | null {
   const currentProgress = getCurrentProgress(game);
-  const nextProgress = buildAdvancedCheckpointProgress(game, currentProgress, checkpointId, "done");
+  const nextProgress = buildAdvancedCheckpointProgress(game, currentProgress, checkpointId, "done", completionState);
 
   if (!nextProgress) {
     return null;
   }
 
-  persistProgress(nextProgress);
-  return nextProgress;
+  return persistProgress(nextProgress);
+}
+
+export function saveCheckpointPhoto(
+  game: GameContent,
+  checkpointId: string,
+  photoState: Pick<CheckpointCompletionState, "photoProvided" | "photoPreview">
+): GameSessionProgress | null {
+  return updateActiveSolveCheckpoint(game, checkpointId, (checkpointState) => ({
+    ...checkpointState,
+    photoProvided: photoState.photoProvided ?? checkpointState.photoProvided,
+    photoPreview: photoState.photoPreview ?? undefined,
+    photoVerifyLastResult: undefined
+  }));
+}
+
+export function recordPhotoVerificationResult(
+  game: GameContent,
+  checkpointId: string,
+  result: PhotoVerifyResponse
+): GameSessionProgress | null {
+  return updateActiveSolveCheckpoint(game, checkpointId, (checkpointState) => ({
+    ...checkpointState,
+    photoVerifyAttemptCount: checkpointState.photoVerifyAttemptCount + 1,
+    photoVerifyLastResult: result
+  }));
 }
 
 export function revealNextHint(game: GameContent, checkpointId: string): GameSessionProgress | null {
@@ -443,8 +612,7 @@ export function revealNextHint(game: GameContent, checkpointId: string): GameSes
     })
   };
 
-  persistProgress(nextProgress);
-  return nextProgress;
+  return persistProgress(nextProgress);
 }
 
 export function revealCheckpointSolution(game: GameContent, checkpointId: string): GameSessionProgress | null {
@@ -481,8 +649,7 @@ export function revealCheckpointSolution(game: GameContent, checkpointId: string
     })
   };
 
-  persistProgress(nextProgress);
-  return nextProgress;
+  return persistProgress(nextProgress);
 }
 
 export function skipCheckpoint(game: GameContent, checkpointId: string): GameSessionProgress | null {
@@ -493,8 +660,7 @@ export function skipCheckpoint(game: GameContent, checkpointId: string): GameSes
     return null;
   }
 
-  persistProgress(nextProgress);
-  return nextProgress;
+  return persistProgress(nextProgress);
 }
 
 export function recordWrongAttempt(game: GameContent, checkpointId: string): GameSessionProgress | null {
@@ -527,6 +693,5 @@ export function recordWrongAttempt(game: GameContent, checkpointId: string): Gam
     })
   };
 
-  persistProgress(nextProgress);
-  return nextProgress;
+  return persistProgress(nextProgress);
 }

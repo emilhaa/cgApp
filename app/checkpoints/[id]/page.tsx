@@ -9,16 +9,18 @@ import {
   enterSolvePhase,
   loadStoredProgress,
   recordWrongAttempt,
+  recordPhotoVerificationResult,
   rememberVisitedCheckpoint,
   revealCheckpointSolution,
   revealNextHint,
+  saveCheckpointPhoto,
   skipCheckpoint
 } from "@/src/core/progress";
 import { deriveCheckpointOverviewItems, getNextCheckpoint } from "@/src/core/gameLogic";
 import { CheckpointMap } from "@/src/ui/CheckpointMap";
 import { ContentErrorScreen } from "@/src/ui/ContentErrorScreen";
 import { TaskRenderer } from "@/src/ui/TaskRenderer";
-import type { GameSessionProgress, SessionCheckpointProgress } from "@/src/types/game";
+import type { GameSessionProgress, PhotoVerifyResponse, SessionCheckpointProgress } from "@/src/types/game";
 import { useEffect, useState } from "react";
 
 const validationResult = validateGameContent(rawGameContent);
@@ -111,14 +113,19 @@ export default function CheckpointDetailPage() {
     phase: "go",
     usedHintCount: 0,
     solutionShown: false,
-    wrongAttemptCount: 0
+    wrongAttemptCount: 0,
+    photoProvided: false,
+    photoVerifyAttemptCount: 0
   };
   const isGoPhase = currentState === "active" && checkpointProgress.phase === "go";
   const isSolvePhase = currentState === "active" && checkpointProgress.phase === "solve";
   const isRevealPhase = checkpointProgress.phase === "reveal" || isSolved;
 
-  function handleComplete() {
-    const nextProgress = completeCheckpoint(game, activeCheckpoint.id);
+  function handleComplete(completionState?: {
+    photoProvided?: boolean;
+    photoPreview?: string | null;
+  }) {
+    const nextProgress = completeCheckpoint(game, activeCheckpoint.id, completionState);
     if (!nextProgress) {
       return {
         ok: false,
@@ -164,6 +171,35 @@ export default function CheckpointDetailPage() {
       return {
         ok: false,
         message: "Riešenie sa nepodarilo zobraziť. Skús obnoviť stránku."
+      };
+    }
+
+    setProgress(nextProgress);
+    return { ok: true };
+  }
+
+  function handleSavePhoto(photoState: {
+    photoProvided?: boolean;
+    photoPreview?: string | null;
+  }) {
+    const nextProgress = saveCheckpointPhoto(game, activeCheckpoint.id, photoState);
+    if (!nextProgress) {
+      return {
+        ok: false,
+        message: "Fotku sa nepodarilo uložiť pre tento checkpoint. Skús ju vybrať ešte raz."
+      };
+    }
+
+    setProgress(nextProgress);
+    return { ok: true };
+  }
+
+  function handlePhotoVerifyResult(result: PhotoVerifyResponse) {
+    const nextProgress = recordPhotoVerificationResult(game, activeCheckpoint.id, result);
+    if (!nextProgress) {
+      return {
+        ok: false,
+        message: "Výsledok overenia sa nepodarilo uložiť. Skús obnoviť stránku."
       };
     }
 
@@ -241,11 +277,15 @@ export default function CheckpointDetailPage() {
               <TaskRenderer
                 checkpoint={activeCheckpoint}
                 checkpointProgress={checkpointProgress}
+                gameId={game.id}
                 onComplete={handleComplete}
+                onPhotoVerifyResult={handlePhotoVerifyResult}
                 onRevealHint={handleRevealHint}
                 onRevealSolution={handleRevealSolution}
+                onSavePhoto={handleSavePhoto}
                 onSkip={handleSkip}
                 onWrongAttempt={handleWrongAttempt}
+                sessionId={progress?.session_id ?? null}
               />
             </div>
           </section>

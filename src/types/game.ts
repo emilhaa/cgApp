@@ -47,8 +47,23 @@ export interface PhotoVerifyConfig {
   max_attempts?: number;
 }
 
+export interface PhotoVerificationConfig {
+  mode: "pose_match";
+}
+
+export type PhotoVerifyVerdict = "pass" | "fail" | "unsure";
+
+export interface PhotoVerifyResponse {
+  verdict: PhotoVerifyVerdict;
+  confidence: number;
+  feedback_sk: string;
+  blocked?: boolean;
+  error_code?: string;
+}
+
 export interface PhotoPoseTask extends TaskBase {
   type: "photo_pose";
+  verification?: PhotoVerificationConfig;
   verify?: PhotoVerifyConfig;
 }
 
@@ -84,6 +99,10 @@ export interface SessionCheckpointProgress {
   usedHintCount: number;
   solutionShown: boolean;
   wrongAttemptCount: number;
+  photoProvided: boolean;
+  photoPreview?: string;
+  photoVerifyAttemptCount: number;
+  photoVerifyLastResult?: PhotoVerifyResponse;
 }
 
 export interface GameSessionProgress {

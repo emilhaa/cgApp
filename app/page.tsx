@@ -40,14 +40,6 @@ export default function HomePage() {
         </section>
 
         <LandingActions game={game} />
-
-        <section className="panel-card">
-          <div className="action-row">
-            <Link className="secondary-action-link" href="/checkpoints">
-              Prehľad checkpointov
-            </Link>
-          </div>
-        </section>
       </div>
     </main>
   );

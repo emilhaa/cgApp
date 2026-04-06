@@ -221,11 +221,15 @@
         "hint1": "Vsimnite si aj ako stoji.",
         "hint2": "Skuste napodobnit aj sklon tela a polohu ruk.",
         "failsafe": "Ak je pri soche prilis vela ludi alebo sa neviete odfotit, ukazte si sochu a pokracujte dalej.",
+        "verification": {
+          "mode": "pose_match"
+        },
         "verify": {
           "requirements": [
-            "Na jednej fotke musi byt viditelna socha Andreja Kmeta aj hrac.",
-            "Hrac stoji vedla sochy a snazi sa napodobnit jej celkovy postoj.",
-            "Hrac sa snazi napodobnit sklon tela a polohu ruk podobne ako socha."
+            "Na jednej fotke musi byt zretelne viditelna socha Andreja Kmeta aj hrac.",
+            "Hrac stoji pri soche tak, aby bolo mozne porovnat jeho postoj so sochou.",
+            "Hrac sa snazi napodobnit sklon tela a polohu ruk podobne ako socha.",
+            "Na PASS staci priblizna zhoda pozy, nie uplne presna kopia detailov."
           ],
           "pass_confidence": 0.75,
           "max_attempts": 5

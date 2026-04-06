@@ -8,27 +8,36 @@ import {
   isSequenceAnswerCorrect,
   moveSequenceItem
 } from "@/src/core/gameLogic";
-import { createPhotoPreview, isImageFile } from "@/src/core/photoProcessing";
-import type { Checkpoint, SessionCheckpointProgress } from "@/src/types/game";
+import { isImageFile, preparePhotoForTask } from "@/src/core/photoProcessing";
+import type { Checkpoint, PhotoVerifyResponse, SessionCheckpointProgress } from "@/src/types/game";
 
 type CompletionResult = {
   ok: boolean;
   message?: string;
 };
 
+type CompletionPayload = {
+  photoProvided?: boolean;
+  photoPreview?: string | null;
+};
+
 type FeedbackState = {
-  tone: "error";
+  tone: "error" | "success";
   message: string;
 };
 
 type TaskRendererProps = {
   checkpoint: Checkpoint;
   checkpointProgress: SessionCheckpointProgress;
-  onComplete: () => CompletionResult;
+  gameId: string;
+  onComplete: (payload?: CompletionPayload) => CompletionResult;
+  onPhotoVerifyResult: (result: PhotoVerifyResponse) => CompletionResult;
   onRevealHint: () => CompletionResult;
   onRevealSolution: () => CompletionResult;
+  onSavePhoto: (payload: CompletionPayload) => CompletionResult;
   onSkip: () => CompletionResult;
   onWrongAttempt: () => void;
+  sessionId: string | null;
 };
 
 function TaskMedia({ checkpoint }: { checkpoint: Checkpoint }) {
@@ -73,18 +82,24 @@ function TaskMedia({ checkpoint }: { checkpoint: Checkpoint }) {
 export function TaskRenderer({
   checkpoint,
   checkpointProgress,
+  gameId,
   onComplete,
+  onPhotoVerifyResult,
   onRevealHint,
   onRevealSolution,
+  onSavePhoto,
   onSkip,
-  onWrongAttempt
+  onWrongAttempt,
+  sessionId
 }: TaskRendererProps) {
   const [codeAnswer, setCodeAnswer] = useState("");
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [sequenceOrder, setSequenceOrder] = useState<string[]>([]);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [storedPhotoPreview, setStoredPhotoPreview] = useState<string | null>(null);
   const [photoFileName, setPhotoFileName] = useState<string | null>(null);
   const [isPreparingPhoto, setIsPreparingPhoto] = useState(false);
+  const [isVerifyingPhoto, setIsVerifyingPhoto] = useState(false);
   const [isSkipConfirming, setIsSkipConfirming] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
 
@@ -97,12 +112,14 @@ export function TaskRenderer({
     setCodeAnswer("");
     setSelectedOption(null);
     setSequenceOrder(checkpoint.task.type === "sequence" ? [...checkpoint.task.sequenceItems] : []);
-    setPhotoPreview(null);
+    setPhotoPreview(checkpointProgress.photoPreview ?? null);
+    setStoredPhotoPreview(checkpointProgress.photoPreview ?? null);
     setPhotoFileName(null);
     setIsPreparingPhoto(false);
+    setIsVerifyingPhoto(false);
     setIsSkipConfirming(false);
     setFeedback(null);
-  }, [checkpoint]);
+  }, [checkpoint.id]);
 
   async function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -113,6 +130,7 @@ export function TaskRenderer({
 
     if (!isImageFile(file)) {
       setPhotoPreview(null);
+      setStoredPhotoPreview(null);
       setPhotoFileName(null);
       setFeedback({
         tone: "error",
@@ -124,13 +142,15 @@ export function TaskRenderer({
     setIsPreparingPhoto(true);
 
     try {
-      const preview = await createPhotoPreview(file);
+      const preparedPhoto = await preparePhotoForTask(file);
 
-      setPhotoPreview(preview);
+      setPhotoPreview(preparedPhoto.previewUrl);
+      setStoredPhotoPreview(preparedPhoto.storedPreview);
       setPhotoFileName(file.name || "Vybraná fotka");
       setFeedback(null);
     } catch {
       setPhotoPreview(null);
+      setStoredPhotoPreview(null);
       setPhotoFileName(null);
       setFeedback({
         tone: "error",
@@ -141,8 +161,8 @@ export function TaskRenderer({
     }
   }
 
-  function finishTask() {
-    const result = onComplete();
+  function finishTask(payload?: CompletionPayload) {
+    const result = onComplete(payload);
 
     if (!result.ok) {
       setFeedback({
@@ -153,6 +173,36 @@ export function TaskRenderer({
     }
 
     setFeedback(null);
+  }
+
+  function savePhotoForCheckpoint() {
+    if (!photoPreview) {
+      setFeedback({
+        tone: "error",
+        message: checkpointProgress.photoProvided
+          ? "Pre nové overenie vyber fotku znova."
+          : "Najprv pridaj alebo odfoť fotku."
+      });
+      return;
+    }
+
+    const result = onSavePhoto({
+      photoProvided: true,
+      photoPreview: storedPhotoPreview
+    });
+
+    if (!result.ok) {
+      setFeedback({
+        tone: "error",
+        message: result.message ?? "Fotku sa nepodarilo uložiť pre tento checkpoint."
+      });
+      return;
+    }
+
+    setFeedback({
+      tone: "success",
+      message: "Fotka je pripravená na overenie."
+    });
   }
 
   function handleRevealHint() {
@@ -286,7 +336,116 @@ export function TaskRenderer({
       return;
     }
 
-    finishTask();
+    savePhotoForCheckpoint();
+  }
+
+  async function handlePhotoVerify() {
+    if (checkpoint.task.type !== "photo_pose") {
+      return;
+    }
+
+    const maxAttempts = checkpoint.task.verify?.max_attempts ?? 5;
+    const currentPreview = photoPreview;
+
+    if (!currentPreview) {
+      setFeedback({
+        tone: "error",
+        message: checkpointProgress.photoProvided
+          ? "Fotku máš označenú ako pridanú, ale na nové overenie ju potrebuješ vybrať znova."
+          : "Najprv vyber fotku, potom ju môžeš overiť."
+      });
+      return;
+    }
+
+    if (checkpointProgress.photoVerifyAttemptCount >= maxAttempts) {
+      setFeedback({
+        tone: "error",
+        message: "Vyčerpal si počet pokusov na automatické overenie. Môžeš použiť nápovedu, riešenie alebo skip."
+      });
+      return;
+    }
+
+    setIsVerifyingPhoto(true);
+    setFeedback(null);
+
+    try {
+      const response = await fetch("/api/verify-photo", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(sessionId ? { "x-session-id": sessionId } : {})
+        },
+        body: JSON.stringify({
+          gameId,
+          checkpointId: checkpoint.id,
+          imageDataUrl: currentPreview
+        })
+      });
+
+      const payload = (await response.json().catch(() => null)) as PhotoVerifyResponse | null;
+      if (!payload) {
+        setFeedback({
+          tone: "error",
+          message: "Fotku sa teraz nepodarilo overiť. Skús to ešte raz."
+        });
+        return;
+      }
+
+      const shouldPersistResult = !payload.error_code || payload.blocked;
+
+      if (shouldPersistResult) {
+        const persistedResult = onPhotoVerifyResult(payload);
+        if (!persistedResult.ok) {
+          setFeedback({
+            tone: "error",
+            message: persistedResult.message ?? "Výsledok overenia sa nepodarilo uložiť."
+          });
+          return;
+        }
+      }
+
+      if (payload.verdict === "pass") {
+        const completionResult = onComplete({
+          photoProvided: true,
+          photoPreview: storedPhotoPreview
+        });
+
+        if (!completionResult.ok) {
+          setFeedback({
+            tone: "error",
+            message: completionResult.message ?? "Fotka prešla overením, ale checkpoint sa nepodarilo dokončiť."
+          });
+          return;
+        }
+
+        return;
+      }
+
+      if (payload.error_code && !payload.blocked) {
+        setFeedback({
+          tone: "error",
+          message: payload.feedback_sk
+        });
+        return;
+      }
+
+      if (!response.ok) {
+        setFeedback({
+          tone: "error",
+          message: payload.feedback_sk
+        });
+        return;
+      }
+
+      setFeedback(null);
+    } catch {
+      setFeedback({
+        tone: "error",
+        message: "Fotku sa teraz nepodarilo overiť. Skús to ešte raz."
+      });
+    } finally {
+      setIsVerifyingPhoto(false);
+    }
   }
 
   return (
@@ -406,16 +565,61 @@ export function TaskRenderer({
             onChange={handlePhotoChange}
             type="file"
           />
-          <p className="section-copy">Fotka sa použije len pre tento checkpoint a nikam sa neposiela.</p>
+          <p className="section-copy">
+            Fotka je dobrovoľná. Použije sa len pre túto úlohu. Hra funguje aj bez nej.
+          </p>
           {isPreparingPhoto ? <p className="section-copy">Pripravujem náhľad fotky...</p> : null}
+          {isVerifyingPhoto ? <p className="section-copy">Overujem fotku...</p> : null}
           {photoPreview ? (
             <figure className="photo-preview-card">
               <img alt="Náhľad vybranej fotky" className="photo-preview-image" src={photoPreview} />
               {photoFileName ? <figcaption className="task-media-caption">{photoFileName}</figcaption> : null}
             </figure>
           ) : null}
-          <button className="action-button" disabled={isPreparingPhoto || !photoPreview} type="submit">
+          {!photoPreview && !isPreparingPhoto ? (
+            <p className="section-copy">Najprv vyber fotku, potom ju môžeš použiť pre tento checkpoint.</p>
+          ) : null}
+          {checkpointProgress.photoProvided && !checkpointProgress.photoPreview && !photoPreview ? (
+            <p className="section-copy">
+              Fotku si už pridal, ale kvôli veľkosti si ju pred ďalším overením treba vybrať znova.
+            </p>
+          ) : null}
+          <p className="section-copy">
+            Pokusy o overenie: {checkpointProgress.photoVerifyAttemptCount} / {checkpoint.task.verify?.max_attempts ?? 5}
+          </p>
+          {checkpointProgress.photoVerifyLastResult ? (
+            <section
+              className={
+                checkpointProgress.photoVerifyLastResult.verdict === "fail" || checkpointProgress.photoVerifyLastResult.blocked
+                  ? "support-card support-card--warning"
+                  : "support-card"
+              }
+            >
+              <p className="eyebrow">
+                {checkpointProgress.photoVerifyLastResult.verdict === "pass"
+                  ? "Overenie prešlo"
+                  : checkpointProgress.photoVerifyLastResult.verdict === "fail"
+                    ? "Overenie neprešlo"
+                    : "Overenie si nie je isté"}
+              </p>
+              <p className="section-copy">{checkpointProgress.photoVerifyLastResult.feedback_sk}</p>
+            </section>
+          ) : null}
+          <button className="secondary-action-button" disabled={isPreparingPhoto || isVerifyingPhoto || !photoPreview} type="submit">
             Použiť fotku
+          </button>
+          <button
+            className="action-button"
+            disabled={
+              isPreparingPhoto
+              || isVerifyingPhoto
+              || !photoPreview
+              || checkpointProgress.photoVerifyAttemptCount >= (checkpoint.task.verify?.max_attempts ?? 5)
+            }
+            onClick={handlePhotoVerify}
+            type="button"
+          >
+            Overiť fotku
           </button>
         </form>
       ) : null}
