@@ -14,6 +14,18 @@ export interface Location {
   label?: string;
 }
 
+export interface RoutePoint {
+  lat: number;
+  lng: number;
+}
+
+export interface GameRoute {
+  fromId: string;
+  toId: string;
+  distanceM?: number;
+  points: RoutePoint[];
+}
+
 interface TaskBase {
   type: TaskType;
   question: string;
@@ -86,6 +98,7 @@ export interface GameContent {
   duration: string;
   language: string;
   checkpoints: Checkpoint[];
+  routes?: GameRoute[];
 }
 
 export type SessionCheckpointStatus = "locked" | "active" | "done" | "skipped";

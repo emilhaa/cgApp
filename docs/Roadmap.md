@@ -10,37 +10,16 @@ Každý bod má cieľ a akceptačné kritériá. Keď sa niečo implementuje, pr
 
 ## Now (najbližšie 1–3 dni)
 
-### 12) Photo task type (MVP UI): odfotiť/nahrať fotku + preview + progres (bez AI verifikácie)
-**Goal:** overiť UX a technickú realizovateľnosť fototaskov na mobiloch bez zbytočnej komplexity.
+### 14) Predpočítané trasy medzi checkpointmi (route segments) + zobrazenie v embed mape
+**Goal:** aby navigácia fungovala spoľahlivo bez otvárania externej aplikácie a bez runtime routing API.
 
 **Acceptance criteria:**
-- Nový task typ `photo_pose` v schéme + validácia contentu.
-- V SOLVE fáze: upload/camera input, preview, tlačidlo “Použiť fotku”.
-- Fotka sa lokálne spracuje (resize/compress) a uloží sa len do runtime progresu ako “photo provided” (nie do server storage).
-- Checkpoint sa dá dokončiť cez “Použiť fotku” (dočasne bez AI).
-- Failsafe/skip funguje ako doteraz.
-
----
-
-### 13) Photo task type (AI verify): server endpoint + OpenAI vision + moderation + fallback
-**Goal:** pridať “wow” verifikáciu pózy bez ukladania fotiek a s bezpečným fallbackom.
-
-**Acceptance criteria:**
-- Server endpoint `/api/verify-photo` (server-side, API key never in client).
-- Client posiela komprimovaný obrázok; server ho neukladá.
-- Pred verifikáciou prebehne moderácia obrázka; pri flagged vráti safe message.
-- Vision verifikácia vráti `pass/fail/unsure` + krátky feedback (SK).
-- UI umožní retry, a vždy existuje fallback (show solution / skip).
-
-## Next (po stabilizácii Now)
-
-### 18) EN lokalizácia – príprava štruktúry
-**Goal:** pripraviť sa na druhý jazyk bez prerábok.
-
-**Acceptance criteria:**
-- Content layout podporuje viac jazykov (napr. samostatný JSON `game.en.json`).
-- UI má prepínač jazyka (môže byť skrytý/len query param v MVP).
-- Bez zmeny logiky taskov.
+- Content schema podporuje predpočítané trasy medzi checkpointmi (segmenty i→i+1).
+- V GO fáze sa zobrazuje trasa (polyline) medzi aktuálnym a ďalším checkpointom.
+- Zobrazuje sa aj vzdialenosť (m) pre segment.
+- Ak je segment trasy missing, fallback je priamka medzi bodmi + krátka poznámka.
+- “Otvoriť v Mapách” ostáva ako sekundárny fallback.
+- Bez nových veľkých závislostí.
 
 ---
 
@@ -192,3 +171,35 @@ Každý bod má cieľ a akceptačné kritériá. Keď sa niečo implementuje, pr
 - If state is 'granted', request normally.
 - Provide short SK instructions for Android Chrome and iOS Safari.
 - No new dependencies.
+
+### 12) Photo task type (MVP UI): odfotiť/nahrať fotku + preview + progres (bez AI verifikácie)
+**Goal:** overiť UX a technickú realizovateľnosť fototaskov na mobiloch bez zbytočnej komplexity.
+
+**Acceptance criteria:**
+- Nový task typ `photo_pose` v schéme + validácia contentu.
+- V SOLVE fáze: upload/camera input, preview, tlačidlo “Použiť fotku”.
+- Fotka sa lokálne spracuje (resize/compress) a uloží sa len do runtime progresu ako “photo provided” (nie do server storage).
+- Checkpoint sa dá dokončiť cez “Použiť fotku” (dočasne bez AI).
+- Failsafe/skip funguje ako doteraz.
+
+---
+
+### 13) Photo task type (AI verify): server endpoint + OpenAI vision + moderation + fallback
+**Goal:** pridať “wow” verifikáciu pózy bez ukladania fotiek a s bezpečným fallbackom.
+
+**Acceptance criteria:**
+- Server endpoint `/api/verify-photo` (server-side, API key never in client).
+- Client posiela komprimovaný obrázok; server ho neukladá.
+- Pred verifikáciou prebehne moderácia obrázka; pri flagged vráti safe message.
+- Vision verifikácia vráti `pass/fail/unsure` + krátky feedback (SK).
+- UI umožní retry, a vždy existuje fallback (show solution / skip).
+
+## Next (po stabilizácii Now)
+
+### 18) EN lokalizácia – príprava štruktúry
+**Goal:** pripraviť sa na druhý jazyk bez prerábok.
+
+**Acceptance criteria:**
+- Content layout podporuje viac jazykov (napr. samostatný JSON `game.en.json`).
+- UI má prepínač jazyka (môže byť skrytý/len query param v MVP).
+- Bez zmeny logiky taskov.

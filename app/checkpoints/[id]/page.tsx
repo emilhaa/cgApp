@@ -263,7 +263,9 @@ export default function CheckpointDetailPage() {
           <section className="panel-card">
             <h2 className="section-title">Kam máš ísť</h2>
             <p className="section-copy">{activeCheckpoint.locationText}</p>
-            {activeCheckpoint.location ? <CheckpointMap checkpoint={activeCheckpoint} /> : null}
+            {activeCheckpoint.location ? (
+              <CheckpointMap checkpoint={activeCheckpoint} game={game} />
+            ) : null}
             <div className="action-row">
               <button className="action-button" onClick={handleEnterSolve} type="button">
                 Som na mieste

@@ -4,6 +4,7 @@ import type {
   ContentIssue,
   ContentValidationResult,
   GameContent,
+  GameRoute,
   GameTask,
   Location,
   MediaItem,
@@ -110,6 +111,30 @@ function validateLocation(value: unknown, path: string, errors: ContentIssue[]):
     lat: value.lat,
     lng: value.lng,
     label: typeof value.label === "string" ? value.label : undefined
+  };
+}
+
+function validateRoutePoint(value: unknown, path: string, errors: ContentIssue[]): Location | null {
+  if (!isRecord(value)) {
+    pushError(errors, path, "Route point must be an object.");
+    return null;
+  }
+
+  if (!isNumber(value.lat)) {
+    pushError(errors, `${path}.lat`, "Route point lat must be a valid number.");
+  }
+
+  if (!isNumber(value.lng)) {
+    pushError(errors, `${path}.lng`, "Route point lng must be a valid number.");
+  }
+
+  if (!isNumber(value.lat) || !isNumber(value.lng)) {
+    return null;
+  }
+
+  return {
+    lat: value.lat,
+    lng: value.lng
   };
 }
 
@@ -424,6 +449,59 @@ function validateCheckpoint(
   };
 }
 
+function validateRoute(
+  value: unknown,
+  path: string,
+  errors: ContentIssue[]
+): GameRoute | null {
+  if (!isRecord(value)) {
+    pushError(errors, path, "Route must be an object.");
+    return null;
+  }
+
+  if (!isNonEmptyString(value.fromId)) {
+    pushError(errors, `${path}.fromId`, "Route fromId must be a non-empty string.");
+  }
+
+  if (!isNonEmptyString(value.toId)) {
+    pushError(errors, `${path}.toId`, "Route toId must be a non-empty string.");
+  }
+
+  if (!Array.isArray(value.points)) {
+    pushError(errors, `${path}.points`, "Route points must be an array with at least 2 points.");
+  }
+
+  const points: Location[] = [];
+  if (Array.isArray(value.points)) {
+    if (value.points.length < 2) {
+      pushError(errors, `${path}.points`, "Route points must contain at least 2 points.");
+    }
+
+    value.points.forEach((pointValue, index) => {
+      const point = validateRoutePoint(pointValue, `${path}.points[${index}]`, errors);
+
+      if (point) {
+        points.push(point);
+      }
+    });
+  }
+
+  if (value.distanceM !== undefined && (!isNumber(value.distanceM) || value.distanceM <= 0)) {
+    pushError(errors, `${path}.distanceM`, "Route distanceM must be a number greater than 0 when present.");
+  }
+
+  if (!isNonEmptyString(value.fromId) || !isNonEmptyString(value.toId) || points.length < 2) {
+    return null;
+  }
+
+  return {
+    fromId: value.fromId,
+    toId: value.toId,
+    distanceM: isNumber(value.distanceM) && value.distanceM > 0 ? value.distanceM : undefined,
+    points
+  };
+}
+
 function addRecoveredContentWarnings(game: GameContent, warnings: ContentIssue[]) {
   const cp09 = game.checkpoints.find((checkpoint) => checkpoint.id === "cp-09-dolna");
   if (
@@ -518,6 +596,39 @@ export function validateGameContent(value: unknown): ContentValidationResult {
     orders.add(checkpoint.order);
   }
 
+  const routes: GameRoute[] = [];
+  if (value.routes !== undefined) {
+    if (!Array.isArray(value.routes)) {
+      pushError(errors, "game.routes", "Game routes must be an array when present.");
+    } else {
+      value.routes.forEach((routeValue, index) => {
+        const route = validateRoute(routeValue, `game.routes[${index}]`, errors);
+
+        if (route) {
+          routes.push(route);
+        }
+      });
+    }
+  }
+
+  const routePairs = new Set<string>();
+  for (const route of routes) {
+    if (!ids.has(route.fromId)) {
+      pushError(errors, "game.routes", `Route fromId does not match an existing checkpoint: ${route.fromId}.`);
+    }
+
+    if (!ids.has(route.toId)) {
+      pushError(errors, "game.routes", `Route toId does not match an existing checkpoint: ${route.toId}.`);
+    }
+
+    const routeKey = `${route.fromId}::${route.toId}`;
+    if (routePairs.has(routeKey)) {
+      pushError(errors, "game.routes", `Duplicate route pair found: ${route.fromId} -> ${route.toId}.`);
+    }
+
+    routePairs.add(routeKey);
+  }
+
   const sortedOrders = [...checkpoints]
     .map((checkpoint) => checkpoint.order)
     .sort((left, right) => left - right);
@@ -541,7 +652,8 @@ export function validateGameContent(value: unknown): ContentValidationResult {
     title: value.title as string,
     duration: value.duration as string,
     language: value.language as string,
-    checkpoints
+    checkpoints,
+    routes
   };
 
   addRecoveredContentWarnings(game, warnings);

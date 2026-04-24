@@ -1,6 +1,8 @@
+helpers
 node_modules
 .next
 out
+routes
 dist
 npm-debug.log*
 yarn-debug.log*

@@ -43,6 +43,24 @@ PHOTO_MODERATION=1
 
 The game content currently lives in `src/content/game.sk.json`.
 
+## Precomputed Routes
+
+Route segments between checkpoints live in `game.routes` inside `src/content/game.sk.json`:
+
+```json
+{
+  "fromId": "cp-01-trojicny",
+  "toId": "cp-02-radnica",
+  "distanceM": 80,
+  "polyline": "..."
+}
+```
+
+- add one segment per fixed checkpoint pair (`i -> i+1`)
+- generate the encoded polyline once in an external routing tool, then paste it into JSON
+- if you do not have a real route yet, you can temporarily use a short valid test polyline for UI testing
+- the app intentionally does **not** call routing APIs at runtime; it only decodes and renders route data already stored in content
+
 ## Rebuild Rules
 
 - `docs/PRD.md` is the source of truth for product behavior

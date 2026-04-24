@@ -1,26 +1,75 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   buildNavigationUrl,
-  buildOpenStreetMapEmbedUrl,
+  calculatePathDistanceMeters,
   calculateDistanceMeters,
   formatApproximateDistance,
   getDistanceFeedback,
+  getPrevCheckpoint,
+  getRouteSegment,
   isLikelyIOSUserAgent
 } from "@/src/core/gameLogic";
-import type { Checkpoint } from "@/src/types/game";
+import type { Checkpoint, GameContent, Location } from "@/src/types/game";
 
 type LocationPermissionState = PermissionState | "idle" | "unsupported";
 
 type CheckpointMapProps = {
+  game: GameContent;
   checkpoint: Checkpoint;
 };
 
-export function CheckpointMap({ checkpoint }: CheckpointMapProps) {
+type LeafletModule = typeof import("leaflet");
+
+const DEFAULT_MAP_ZOOM = 17;
+const MAP_FIT_PADDING: [number, number] = [28, 28];
+
+function areLocationsClose(left: Location, right: Location) {
+  return Math.abs(left.lat - right.lat) < 0.00002 && Math.abs(left.lng - right.lng) < 0.00002;
+}
+
+function ensureRouteEndpoints(points: Location[], start: Location, end: Location) {
+  const normalizedPoints = [...points];
+
+  if (normalizedPoints.length === 0 || !areLocationsClose(normalizedPoints[0], start)) {
+    normalizedPoints.unshift(start);
+  }
+
+  const lastPoint = normalizedPoints[normalizedPoints.length - 1];
+  if (!lastPoint || !areLocationsClose(lastPoint, end)) {
+    normalizedPoints.push(end);
+  }
+
+  return normalizedPoints;
+}
+
+function toLeafletLatLng(location: Location): [number, number] {
+  return [location.lat, location.lng];
+}
+
+function createMarkerIcon(leaflet: LeafletModule, variant: "start" | "end") {
+  const size = variant === "end" ? 24 : 18;
+  const anchor = Math.round(size / 2);
+
+  return leaflet.divIcon({
+    className: "map-marker-icon",
+    html: `<span class="map-marker map-marker--${variant}"></span>`,
+    iconSize: [size, size],
+    iconAnchor: [anchor, anchor]
+  });
+}
+
+export function CheckpointMap({ game, checkpoint }: CheckpointMapProps) {
   const location = checkpoint.location;
+  const mapElementRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<import("leaflet").Map | null>(null);
+  const leafletRef = useRef<LeafletModule | null>(null);
+  const routeLayerRef = useRef<import("leaflet").LayerGroup | null>(null);
   const [permissionState, setPermissionState] = useState<LocationPermissionState>("idle");
   const [isCheckingLocation, setIsCheckingLocation] = useState(false);
+  const [isMapReady, setIsMapReady] = useState(false);
+  const [mapLoadError, setMapLoadError] = useState<string | null>(null);
   const [gpsMessage, setGpsMessage] = useState<string | null>(null);
   const [distanceText, setDistanceText] = useState<string | null>(null);
 
@@ -83,8 +132,146 @@ export function CheckpointMap({ checkpoint }: CheckpointMapProps) {
   }
 
   const targetLocation = location;
-  const mapUrl = buildOpenStreetMapEmbedUrl(targetLocation);
   const navigationUrl = buildNavigationUrl(targetLocation, checkpoint.locationText, isIOS ? "ios" : "default");
+  const routeData = useMemo(() => {
+    const prevCheckpoint = getPrevCheckpoint(game, checkpoint.id);
+    const originLocation = prevCheckpoint?.location ?? null;
+
+    if (!originLocation) {
+      return {
+        originCheckpoint: null,
+        routeLocations: [] as Location[],
+        routeDistance: null as string | null,
+        routeNote: null as string | null
+      };
+    }
+
+    const routeSegment = getRouteSegment(game, prevCheckpoint.id, checkpoint.id);
+    const hasRoutePoints = Boolean(
+      routeSegment
+      && routeSegment.fromId === prevCheckpoint.id
+      && routeSegment.toId === checkpoint.id
+      && Array.isArray(routeSegment.points)
+      && routeSegment.points.length >= 2
+    );
+    const routeLocations = hasRoutePoints
+      ? ensureRouteEndpoints(routeSegment.points, originLocation, targetLocation)
+      : [originLocation, targetLocation];
+    const routeDistanceMeters = routeSegment?.distanceM ?? calculatePathDistanceMeters(routeLocations);
+
+    return {
+      originCheckpoint: prevCheckpoint,
+      routeLocations,
+      routeDistance: routeDistanceMeters > 0 ? formatApproximateDistance(routeDistanceMeters) : null,
+      routeNote: hasRoutePoints ? null : "Trasa nie je dostupná, zobrazujem priamu čiaru."
+    };
+  }, [checkpoint.id, checkpoint.order, game, targetLocation]);
+
+  useEffect(() => {
+    if (!location || !mapElementRef.current || mapRef.current) {
+      return;
+    }
+
+    let isActive = true;
+
+    async function initializeMap() {
+      try {
+        const leaflet = await import("leaflet");
+
+        if (!isActive || !mapElementRef.current || mapRef.current) {
+          return;
+        }
+
+        leafletRef.current = leaflet;
+
+        const map = leaflet.map(mapElementRef.current, {
+          zoomControl: false
+        });
+
+        leaflet.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: "&copy; OpenStreetMap contributors",
+          maxZoom: 19
+        }).addTo(map);
+
+        leaflet.control.zoom({
+          position: "bottomright"
+        }).addTo(map);
+
+        routeLayerRef.current = leaflet.layerGroup().addTo(map);
+        mapRef.current = map;
+        setMapLoadError(null);
+        setIsMapReady(true);
+      } catch {
+        if (!isActive) {
+          return;
+        }
+
+        setMapLoadError("Mapu sa teraz nepodarilo načítať. Navigáciu a kontrolu polohy môžeš stále použiť.");
+      }
+    }
+
+    void initializeMap();
+
+    return () => {
+      isActive = false;
+      routeLayerRef.current?.clearLayers();
+      routeLayerRef.current = null;
+      mapRef.current?.remove();
+      mapRef.current = null;
+      leafletRef.current = null;
+      setIsMapReady(false);
+    };
+  }, [location]);
+
+  useEffect(() => {
+    if (!location || !isMapReady || !leafletRef.current || !mapRef.current || !routeLayerRef.current) {
+      return;
+    }
+
+    const leaflet = leafletRef.current;
+    const map = mapRef.current;
+    const routeLayer = routeLayerRef.current;
+    const destinationLatLng = toLeafletLatLng(targetLocation);
+    const originLocation = routeData.originCheckpoint?.location ?? null;
+
+    routeLayer.clearLayers();
+    map.invalidateSize();
+
+    if (!originLocation) {
+      leaflet.marker(destinationLatLng, {
+        icon: createMarkerIcon(leaflet, "end")
+      }).addTo(routeLayer);
+
+      map.setView(destinationLatLng, DEFAULT_MAP_ZOOM);
+      return;
+    }
+
+    const originLatLng = toLeafletLatLng(originLocation);
+    const routeLatLngs = routeData.routeLocations.map(toLeafletLatLng);
+    const polyline = leaflet.polyline(routeLatLngs, {
+      color: "#7c4a1d",
+      lineCap: "round",
+      lineJoin: "round",
+      opacity: 0.9,
+      weight: 5
+    }).addTo(routeLayer);
+
+    leaflet.marker(originLatLng, {
+      icon: createMarkerIcon(leaflet, "start")
+    }).addTo(routeLayer);
+
+    leaflet.marker(destinationLatLng, {
+      icon: createMarkerIcon(leaflet, "end")
+    }).addTo(routeLayer);
+
+    const bounds = polyline.getBounds();
+    bounds.extend(originLatLng);
+    bounds.extend(destinationLatLng);
+
+    map.fitBounds(bounds, {
+      padding: MAP_FIT_PADDING
+    });
+  }, [checkpoint.id, isMapReady, routeData, targetLocation, location]);
 
   function showDeniedMessage() {
     setDistanceText(null);
@@ -155,13 +342,28 @@ export function CheckpointMap({ checkpoint }: CheckpointMapProps) {
 
   return (
     <section className="map-card">
-      <iframe
-        className="map-embed"
-        loading="lazy"
-        referrerPolicy="no-referrer-when-downgrade"
-        src={mapUrl}
-        title={`Mapa pre checkpoint ${checkpoint.title}`}
-      />
+      <div className="map-frame">
+        {mapLoadError ? (
+          <div className="map-fallback">
+            <p className="section-copy">{mapLoadError}</p>
+          </div>
+        ) : (
+          <div
+            aria-label={`Mapa pre checkpoint ${checkpoint.title}`}
+            className="map-live"
+            ref={mapElementRef}
+          />
+        )}
+      </div>
+
+      {routeData.routeDistance || routeData.routeNote ? (
+        <section className="support-card">
+          {routeData.routeDistance ? (
+            <p className="section-copy">Trasa k tomuto checkpointu: {routeData.routeDistance}</p>
+          ) : null}
+          {routeData.routeNote ? <p className="map-note">{routeData.routeNote}</p> : null}
+        </section>
+      ) : null}
 
       <div className="action-row">
         <a className="secondary-action-link" href={navigationUrl} rel="noreferrer" target="_blank">

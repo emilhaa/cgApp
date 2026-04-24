@@ -1,6 +1,7 @@
 import type {
   Checkpoint,
   GameContent,
+  GameRoute,
   GameSessionProgress,
   GameTask,
   Location,
@@ -28,6 +29,13 @@ export interface FinishSummary {
   totalHintsUsed: number;
   totalShownSolutions: number;
   totalWrongAttempts: number;
+}
+
+export interface MapBounds {
+  minLat: number;
+  maxLat: number;
+  minLng: number;
+  maxLng: number;
 }
 
 function getFallbackStateForIndex(index: number): CheckpointOverviewState {
@@ -74,13 +82,28 @@ export function getInitialSelectableCheckpointId(items: CheckpointOverviewItem[]
 }
 
 export function getNextCheckpoint(game: GameContent, checkpointId: string): Checkpoint | null {
-  const currentIndex = game.checkpoints.findIndex((checkpoint) => checkpoint.id === checkpointId);
-  if (currentIndex === -1) {
+  const currentCheckpoint = game.checkpoints.find((checkpoint) => checkpoint.id === checkpointId);
+  if (!currentCheckpoint) {
     return null;
   }
 
-  return game.checkpoints[currentIndex + 1] ?? null;
+  return game.checkpoints.find((checkpoint) => checkpoint.order === currentCheckpoint.order + 1) ?? null;
 }
+
+export function getPrevCheckpoint(game: GameContent, checkpointId: string): Checkpoint | null {
+  const currentCheckpoint = game.checkpoints.find((checkpoint) => checkpoint.id === checkpointId);
+  if (!currentCheckpoint) {
+    return null;
+  }
+
+  return game.checkpoints.find((checkpoint) => checkpoint.order === currentCheckpoint.order - 1) ?? null;
+}
+
+export function getRouteSegment(game: GameContent, fromId: string, toId: string): GameRoute | null {
+  return game.routes?.find((route) => route.fromId === fromId && route.toId === toId) ?? null;
+}
+
+export const findRouteSegment = getRouteSegment;
 
 export function normalizeCodeAnswer(value: string): string {
   return value
@@ -136,16 +159,35 @@ export function getTaskHints(task: GameTask): string[] {
   return normalizedHints.filter((hint, index) => normalizedHints.indexOf(hint) === index).slice(0, 2);
 }
 
-export function buildOpenStreetMapEmbedUrl(location: Location): string {
-  const latOffset = 0.0026;
-  const lngOffset = 0.0038;
-  const left = String(location.lng - lngOffset);
-  const bottom = String(location.lat - latOffset);
-  const right = String(location.lng + lngOffset);
-  const top = String(location.lat + latOffset);
-  const marker = `${location.lat},${location.lng}`;
+export function buildBoundsForLocations(locations: Location[]): MapBounds {
+  const latitudes = locations.map((location) => location.lat);
+  const longitudes = locations.map((location) => location.lng);
+  const minLat = Math.min(...latitudes);
+  const maxLat = Math.max(...latitudes);
+  const minLng = Math.min(...longitudes);
+  const maxLng = Math.max(...longitudes);
+  const latPadding = Math.max((maxLat - minLat) * 0.18, 0.0012);
+  const lngPadding = Math.max((maxLng - minLng) * 0.18, 0.0015);
 
-  return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(left)},${encodeURIComponent(bottom)},${encodeURIComponent(right)},${encodeURIComponent(top)}&layer=mapnik&marker=${encodeURIComponent(marker)}`;
+  return {
+    minLat: minLat - latPadding,
+    maxLat: maxLat + latPadding,
+    minLng: minLng - lngPadding,
+    maxLng: maxLng + lngPadding
+  };
+}
+
+export function buildOpenStreetMapEmbedUrlForBounds(bounds: MapBounds): string {
+  const left = String(bounds.minLng);
+  const bottom = String(bounds.minLat);
+  const right = String(bounds.maxLng);
+  const top = String(bounds.maxLat);
+
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(left)},${encodeURIComponent(bottom)},${encodeURIComponent(right)},${encodeURIComponent(top)}&layer=mapnik`;
+}
+
+export function buildOpenStreetMapEmbedUrl(location: Location): string {
+  return buildOpenStreetMapEmbedUrlForBounds(buildBoundsForLocations([location]));
 }
 
 export function buildNavigationUrl(
@@ -192,6 +234,20 @@ export function calculateDistanceMeters(origin: Location, target: Location): num
 
   const arc = 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
   return Math.round(earthRadiusMeters * arc);
+}
+
+export function calculatePathDistanceMeters(points: Location[]): number {
+  if (points.length < 2) {
+    return 0;
+  }
+
+  let totalDistance = 0;
+
+  for (let index = 1; index < points.length; index += 1) {
+    totalDistance += calculateDistanceMeters(points[index - 1], points[index]);
+  }
+
+  return totalDistance;
 }
 
 export function formatApproximateDistance(distanceMeters: number): string {

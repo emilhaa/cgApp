@@ -456,22 +456,72 @@ button.checkpoint-card,
   margin-top: 16px;
 }
 
-.map-copy {
-  display: grid;
-  gap: 8px;
+.map-frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
 }
 
-.map-embed {
+.map-live,
+.map-fallback {
   width: 100%;
-  min-height: 280px;
+  min-height: 300px;
   border: 1px solid rgba(124, 74, 29, 0.18);
   border-radius: 18px;
   background: rgba(255, 250, 240, 0.92);
 }
 
+.map-live .leaflet-control-attribution,
+.map-live .leaflet-control-zoom a {
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+}
+
+.map-live .leaflet-control-zoom a {
+  color: var(--text);
+}
+
+.map-live .leaflet-control-attribution {
+  background: rgba(255, 250, 240, 0.88);
+}
+
+.map-fallback {
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.map-marker-icon {
+  background: transparent;
+  border: 0;
+}
+
+.map-marker {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.map-marker--start {
+  background: rgba(47, 37, 21, 0.78);
+  border: 3px solid rgba(255, 250, 240, 0.9);
+}
+
+.map-marker--end {
+  background: #b43f1a;
+  border: 4px solid rgba(255, 250, 240, 0.95);
+  box-shadow: 0 0 0 4px rgba(180, 63, 26, 0.18);
+}
+
 .map-distance {
   margin: 10px 0 0;
   font-weight: 700;
+}
+
+.map-note {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.95rem;
 }
 
 .task-media-card,

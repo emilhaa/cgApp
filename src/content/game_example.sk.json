@@ -3,201 +3,6 @@
   "title": "City Game Stiavnica",
   "duration": "90-120 min",
   "language": "sk",
-  "routes": [
-    {
-      "fromId": "cp-01-trojicny",
-  "toId": "cp-02-radnica",
-  "distanceM": 100,
-  "points": [
-      {
-        "lat": 48.459398,
-        "lng": 18.892604
-      },
-      {
-        "lat": 48.459333,
-        "lng": 18.89264
-      },
-      {
-        "lat": 48.459146,
-        "lng": 18.892674
-      },
-      {
-        "lat": 48.459102,
-        "lng": 18.892617
-      },
-      {
-        "lat": 48.459068,
-        "lng": 18.892503
-      },
-      {
-        "lat": 48.45902,
-        "lng": 18.892363
-      },
-      {
-        "lat": 48.458972,
-        "lng": 18.892276
-      }
-    ]
-    },
-    {
-      "fromId": "cp-02-radnica",
-      "toId": "cp-03-klopacka",
-      "distanceM": 119,
-      "points": [
-    {
-      "lat": 48.458887,
-      "lng": 18.892118
-    },
-    {
-      "lat": 48.45884,
-      "lng": 18.892061
-    },
-    {
-      "lat": 48.458752,
-      "lng": 18.892035
-    },
-    {
-      "lat": 48.458697,
-      "lng": 18.891587
-    },
-    {
-      "lat": 48.458668,
-      "lng": 18.891476
-    },
-    {
-      "lat": 48.458498,
-      "lng": 18.891278
-    },
-    {
-      "lat": 48.458464,
-      "lng": 18.891252
-    },
-    {
-      "lat": 48.458429,
-      "lng": 18.891234
-    },
-    {
-      "lat": 48.458355,
-      "lng": 18.891234
-    },
-    {
-      "lat": 48.458284,
-      "lng": 18.891275
-    },
-    {
-      "lat": 48.458216,
-      "lng": 18.891354
-    },
-    {
-      "lat": 48.458143,
-      "lng": 18.891506
-    },
-    {
-      "lat": 48.458055,
-      "lng": 18.891752
-    },
-    {
-      "lat": 48.457965,
-      "lng": 18.892035
-    },
-    {
-      "lat": 48.457868,
-      "lng": 18.892385
-    }
-  ]
-    },
-    {
-  "fromId": "cp-03-klopacka",
-  "toId": "cp-04-piargska",
-  "distanceM": 336,
-  "points": [
-    {
-      "lat": 48.457869,
-      "lng": 18.892382
-    },
-    {
-      "lat": 48.457821,
-      "lng": 18.892534
-    },
-    {
-      "lat": 48.457743,
-      "lng": 18.892696
-    },
-    {
-      "lat": 48.457538,
-      "lng": 18.893117
-    },
-    {
-      "lat": 48.457502,
-      "lng": 18.893184
-    },
-    {
-      "lat": 48.457405,
-      "lng": 18.893321
-    },
-    {
-      "lat": 48.457246,
-      "lng": 18.89349
-    },
-    {
-      "lat": 48.45715,
-      "lng": 18.893576
-    },
-    {
-      "lat": 48.457097,
-      "lng": 18.893625
-    },
-    {
-      "lat": 48.45688,
-      "lng": 18.893776
-    },
-    {
-      "lat": 48.456651,
-      "lng": 18.893957
-    },
-    {
-      "lat": 48.456526,
-      "lng": 18.89402
-    },
-    {
-      "lat": 48.456377,
-      "lng": 18.894039
-    },
-    {
-      "lat": 48.456213,
-      "lng": 18.894025
-    },
-    {
-      "lat": 48.4561,
-      "lng": 18.894003
-    },
-    {
-      "lat": 48.455982,
-      "lng": 18.893956
-    },
-    {
-      "lat": 48.455883,
-      "lng": 18.893895
-    },
-    {
-      "lat": 48.455773,
-      "lng": 18.893811
-    },
-    {
-      "lat": 48.455801,
-      "lng": 18.893738
-    },
-    {
-      "lat": 48.455748,
-      "lng": 18.893684
-    },
-    {
-      "lat": 48.455524,
-      "lng": 18.893296
-    }
-  ]
-}
-  ],
   "checkpoints": [
     {
       "id": "cp-01-trojicny",
@@ -234,7 +39,7 @@
       "title": "Stara radnica",
       "storyBeat": "Druhy krok vedie k historickej budove.",
       "microGuide": "Najdi vstup do Starej radnice.",
-      "locationText": "Na spodnom konci namestia zabocite vpravo k mestskej radnici a na mure na pravej strane zbadate ozdobny relief.",
+      "locationText": "Stara radnica v centre mesta.",
       "location": {
         "lat": 48.458907,
         "lng": 18.8921416,
@@ -244,7 +49,7 @@
         "type": "sequence",
         "question": "Zoradte obrazky na reliefe oproti radnici zlava doprava.",
         "sequenceItems": [
-          "Matej Kornel Hell",
+          "Maria Terezia",
           "Samuel Mikoviny",
           "Dvaja pilcici",
           "Jasterica so zlatom v papuli"
@@ -252,7 +57,7 @@
         "answer": [
           "Dvaja pilcici",
           "Samuel Mikoviny",
-          "Matej Kornel Hell",
+          "Maria Terezia",
           "Jasterica so zlatom v papuli"
         ],
         "hints": [
@@ -268,9 +73,9 @@
       "id": "cp-03-klopacka",
       "order": 3,
       "title": "Klopacka",
-      "storyBeat": "Treti krok vedie k historickej budove. TODO",
+      "storyBeat": "Treti krok vedie k historickej budove.",
       "microGuide": "Zaujimavost o klopacke.",
-      "locationText": "Pokracujte dalej na hlavnu cestu, ktora stupajuc dvakrat zaboci vlavo. Ked nou vyjdes az na uroven Klopacky, na mure uvidis pamatnu tabulu.",
+      "locationText": "Na hlavnej ceste na mure na urovni klopacky je pamatna tabula.",
       "location": {
         "lat": 48.457865,
         "lng": 18.892345,
@@ -300,7 +105,7 @@
       "title": "Piargska brana",
       "storyBeat": "Druhy krok vedie k historickej budove.",
       "microGuide": "Najdi vstup do Starej radnice.",
-      "locationText": "Pokracujte dalej po hlavnej ceste, po chvili ako zaboci tiahlou zakrutou doprava a na pravej strane sponci oborny mur, v dialke zbadate Piargsku branu.",
+      "locationText": "Pokracujte dalej po hlavnej ceste, ktora dalej stupa tiahlou zakrutou dohora. Ked na plavej strane sponci oborny mur, v dialke zbadate Piargsku branu.",
       "location": {
         "lat": 48.455441,
         "lng": 18.893220,
@@ -416,15 +221,11 @@
         "hint1": "Vsimnite si aj ako stoji.",
         "hint2": "Skuste napodobnit aj sklon tela a polohu ruk.",
         "failsafe": "Ak je pri soche prilis vela ludi alebo sa neviete odfotit, ukazte si sochu a pokracujte dalej.",
-        "verification": {
-          "mode": "pose_match"
-        },
         "verify": {
           "requirements": [
-            "Na jednej fotke musi byt zretelne viditelna socha Andreja Kmeta aj hrac.",
-            "Hrac stoji pri soche tak, aby bolo mozne porovnat jeho postoj so sochou.",
-            "Hrac sa snazi napodobnit sklon tela a polohu ruk podobne ako socha.",
-            "Na PASS staci priblizna zhoda pozy, nie uplne presna kopia detailov."
+            "Na jednej fotke musi byt viditelna socha Andreja Kmeta aj hrac.",
+            "Hrac stoji vedla sochy a snazi sa napodobnit jej celkovy postoj.",
+            "Hrac sa snazi napodobnit sklon tela a polohu ruk podobne ako socha."
           ],
           "pass_confidence": 0.75,
           "max_attempts": 5
